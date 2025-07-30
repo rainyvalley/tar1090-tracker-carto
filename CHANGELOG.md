@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.9] - 2025-07-30
+
+### Fixed
+- Fixed missing changelog issue in Home Assistant addon interface
+- Added CHANGELOG.md file to addon directory for HA compatibility
+
+### Technical
+- Copied changelog to /tar1090/CHANGELOG.md for proper HA addon store integration
+- Ensured changelog is accessible through HA addon interface
+
 ## [1.0.3] - 2025-07-29
 
 ### Added
