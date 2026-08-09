@@ -30,6 +30,7 @@ A Home Assistant add-on that displays aircraft tracking data from a tar1090 serv
    - **Map Center**: Set your location coordinates for map centering
    - **Map Zoom**: Initial zoom level (1=world view, 18=street level)
    - **Auto Center**: Automatically center map on aircraft
+   - **Map Provider**: Default base map (`osm`, `carto_light`, `carto_dark`, `carto_voyager`, `esri_satellite`). Defaults to `carto_dark` because OpenStreetMap's public tile servers block self-hosted apps (HTTP 403). You can still switch layers live from the map's dropdown.
 4. Click **Save** and then **Start** the add-on
 5. The add-on will appear in your sidebar with an airplane icon
 
@@ -228,6 +229,7 @@ show_history: true             # Show aircraft movement trails
 map_center_lat: 40.7128        # Map center latitude (your location)
 map_center_lon: -74.0060       # Map center longitude (your location)
 map_zoom: 8                    # Initial map zoom level (1-18)
+map_provider: "carto_dark"     # Default base map: osm | carto_light | carto_dark | carto_voyager | esri_satellite
 ```
 
 ## API Endpoints
