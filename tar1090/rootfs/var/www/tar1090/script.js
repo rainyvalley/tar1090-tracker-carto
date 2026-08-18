@@ -66,10 +66,6 @@ class AircraftTracker {
         // self-hosted apps under their tile usage policy.
         const cartoAttr = '© OpenStreetMap contributors © CARTO';
         this.baseLayers = {
-            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors'
-            }),
             carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 maxZoom: 20,
                 subdomains: 'abcd',
@@ -268,18 +264,18 @@ class AircraftTracker {
             const marker = L.marker(position, { icon: aircraftIcon });
             marker.bindPopup(this.createPopupContent(aircraft));
             
-            // Add click handler for FlightRadar24 
+            // Add click handler for FlightAware 
             marker.on('click', (e) => {
                 const registration = aircraft.r || aircraft.reg;
                 const callsign = aircraft.flight ? aircraft.flight.trim() : null;
                 
-                // Right-click or Ctrl+click to open FlightRadar24 directly
+                // Right-click or Ctrl+click to open FlightAware directly
                 if (e.originalEvent.ctrlKey || e.originalEvent.button === 2) {
                     e.originalEvent.preventDefault();
                     if (registration) {
-                        window.open(`https://www.flightradar24.com/data/aircraft/${registration}`, '_blank', 'noopener,noreferrer');
+                        window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
                     } else if (callsign) {
-                        window.open(`https://www.flightradar24.com/data/flights/${callsign}`, '_blank', 'noopener,noreferrer');
+                        window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
                     }
                 }
             });
@@ -291,9 +287,9 @@ class AircraftTracker {
                 const callsign = aircraft.flight ? aircraft.flight.trim() : null;
                 
                 if (registration) {
-                    window.open(`https://www.flightradar24.com/data/aircraft/${registration}`, '_blank', 'noopener,noreferrer');
+                    window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
                 } else if (callsign) {
-                    window.open(`https://www.flightradar24.com/data/flights/${callsign}`, '_blank', 'noopener,noreferrer');
+                    window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
                 }
             });
             
@@ -408,12 +404,12 @@ class AircraftTracker {
         const squawk = aircraft.squawk || 'N/A';
         const registration = aircraft.r || aircraft.reg || 'N/A';
         
-        // Create FlightRadar24 link if we have registration or callsign
+        // Create FlightAware link if we have registration or callsign
         let fr24Link = '';
         if (registration !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightradar24.com/data/aircraft/${registration}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightRadar24</a></div>`;
+            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${registration}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
         } else if (callsign !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightradar24.com/data/flights/${callsign}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightRadar24</a></div>`;
+            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${callsign}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
         }
         
         return `
