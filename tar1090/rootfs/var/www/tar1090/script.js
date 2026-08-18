@@ -49,7 +49,8 @@ class AircraftTracker {
             map_center_lat: 54.7023,
             map_center_lon: -3.2765,
             map_zoom: 8,
-            update_interval: 1
+            update_interval: 1,
+            map_provider: 'carto_dark'
         };
     }
 
@@ -60,19 +61,53 @@ class AircraftTracker {
             this.config.map_zoom
         );
 
-        // Add tile layers
-        this.osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        });
+        // Available base map providers. Carto is used by default because
+        // OpenStreetMap's public tile servers reject (HTTP 403) traffic from
+        // self-hosted apps under their tile usage policy.
+        const cartoAttr = '© OpenStreetMap contributors © CARTO';
+        this.baseLayers = {
+            carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd',
+                attribution: cartoAttr
+            }),
+            carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd',
+                attribution: cartoAttr
+            }),
+            carto_voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20,
+                subdomains: 'abcd',
+                attribution: cartoAttr
+            }),
+            esri_satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles © Esri'
+            })
+        };
 
-        this.satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri'
-        });
+        // Apply the configured default provider (falls back to Carto Dark)
+        const defaultProvider = this.baseLayers[this.config.map_provider]
+            ? this.config.map_provider : 'carto_dark';
+        this.setMapProvider(defaultProvider);
 
-        // Add default layer
-        this.osmLayer.addTo(this.map);
+        // Reflect the active provider in the selector
+        const selector = document.getElementById('map-layer');
+        if (selector) selector.value = defaultProvider;
 
-        console.log('Map initialized');
+        console.log('Map initialized with provider:', defaultProvider);
+    }
+
+    setMapProvider(id) {
+        const next = this.baseLayers[id] || this.baseLayers['carto_dark'];
+        if (this.currentBaseLayer && this.currentBaseLayer !== next) {
+            this.map.removeLayer(this.currentBaseLayer);
+        }
+        if (!this.map.hasLayer(next)) {
+            next.addTo(this.map);
+        }
+        this.currentBaseLayer = next;
     }
 
     setupEventListeners() {
@@ -108,17 +143,7 @@ class AircraftTracker {
 
         // Map layer selector
         document.getElementById('map-layer').addEventListener('change', (e) => {
-            const layer = e.target.value;
-            this.map.eachLayer((mapLayer) => {
-                if (mapLayer !== this.osmLayer && mapLayer !== this.satelliteLayer) return;
-                this.map.removeLayer(mapLayer);
-            });
-            
-            if (layer === 'satellite') {
-                this.satelliteLayer.addTo(this.map);
-            } else {
-                this.osmLayer.addTo(this.map);
-            }
+            this.setMapProvider(e.target.value);
         });
     }
 
@@ -239,18 +264,18 @@ class AircraftTracker {
             const marker = L.marker(position, { icon: aircraftIcon });
             marker.bindPopup(this.createPopupContent(aircraft));
             
-            // Add click handler for FlightRadar24 
+            // Add click handler for FlightAware 
             marker.on('click', (e) => {
                 const registration = aircraft.r || aircraft.reg;
                 const callsign = aircraft.flight ? aircraft.flight.trim() : null;
                 
-                // Right-click or Ctrl+click to open FlightRadar24 directly
+                // Right-click or Ctrl+click to open FlightAware directly
                 if (e.originalEvent.ctrlKey || e.originalEvent.button === 2) {
                     e.originalEvent.preventDefault();
                     if (registration) {
-                        window.open(`https://www.flightradar24.com/data/aircraft/${registration}`, '_blank', 'noopener,noreferrer');
+                        window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
                     } else if (callsign) {
-                        window.open(`https://www.flightradar24.com/data/flights/${callsign}`, '_blank', 'noopener,noreferrer');
+                        window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
                     }
                 }
             });
@@ -262,9 +287,9 @@ class AircraftTracker {
                 const callsign = aircraft.flight ? aircraft.flight.trim() : null;
                 
                 if (registration) {
-                    window.open(`https://www.flightradar24.com/data/aircraft/${registration}`, '_blank', 'noopener,noreferrer');
+                    window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
                 } else if (callsign) {
-                    window.open(`https://www.flightradar24.com/data/flights/${callsign}`, '_blank', 'noopener,noreferrer');
+                    window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
                 }
             });
             
@@ -379,12 +404,12 @@ class AircraftTracker {
         const squawk = aircraft.squawk || 'N/A';
         const registration = aircraft.r || aircraft.reg || 'N/A';
         
-        // Create FlightRadar24 link if we have registration or callsign
+        // Create FlightAware link if we have registration or callsign
         let fr24Link = '';
         if (registration !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightradar24.com/data/aircraft/${registration}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightRadar24</a></div>`;
+            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${registration}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
         } else if (callsign !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightradar24.com/data/flights/${callsign}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightRadar24</a></div>`;
+            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${callsign}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
         }
         
         return `
