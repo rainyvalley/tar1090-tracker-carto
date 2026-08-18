@@ -36,4 +36,4 @@ schema:
   map_center_lon: float
   map_zoom: int(1,18)
   auto_center: bool
-  map_provider: list(osm|carto_light|carto_dark|carto_voyager|esri_satellite)
+  map_provider: list(carto_light|carto_dark|carto_voyager|esri_satellite)
