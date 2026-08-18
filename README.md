@@ -1,37 +1,52 @@
-# Tar1090 Aircraft Tracker - Home Assistant Add-on
+# Tar1090 Aircraft Tracker (Carto) — Home Assistant Add-on
 
-[![Open your Home Assistant instance and show the add add-on repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Frandom-robbie%2Ftar1090-tracker)
+A Home Assistant add-on that displays aircraft tracking data from a [tar1090](https://github.com/wiedehopf/tar1090) server on an interactive map with full dashboard integration.
 
-A Home Assistant add-on that displays aircraft tracking data from a tar1090 server on an interactive map with full dashboard integration.
+> **This is a fork.** It is based on [`random-robbie/tar1090-tracker`](https://github.com/random-robbie/tar1090-tracker) by [random-robbie](https://github.com/random-robbie) and maintained independently. All original functionality is preserved; the differences are summarized below. See [Credits](#credits--license).
+
+## What's different in this fork
+
+This fork exists to fix two things that were broken or limiting in the upstream add-on:
+
+- **Selectable Carto base maps (multiple providers).** Upstream defaulted to OpenStreetMap's public tile servers, which return **HTTP 403** for self-hosted apps under OSM's tile usage policy — so the map often failed to load. This fork adds a `map_provider` option and ships four working base layers you can pick as the default and switch between live from the map dropdown: **Carto Light**, **Carto Dark** (default), **Carto Voyager**, and **Esri Satellite**. The broken OpenStreetMap layer has been removed entirely so it can't be selected by mistake.
+- **Flight links now use FlightAware instead of FlightRadar24.** Upstream linked aircraft to FlightRadar24's `/data/flights/<ident>` path, which only accepts airline flight numbers — so clicking a general-aviation tail number (e.g. `N76KA`) landed on a broken page. This fork links to FlightAware's `/live/flight/<ident>` endpoint, which resolves both registrations and callsigns, so tail-number lookups work.
+
+See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 
 ## Features
 
 - **Real-time Aircraft Tracking**: Connect to your tar1090 server and display live aircraft positions
-- **Interactive Map**: Leaflet-based map with OpenStreetMap and satellite layers
-- **Aircraft Details**: Click on aircraft for detailed information including callsign, altitude, speed, and track
+- **Interactive Map**: Leaflet-based map with multiple Carto base layers plus satellite imagery
+- **Aircraft Details**: Click an aircraft for callsign, altitude, speed, and track — with a working **View on FlightAware** link
 - **Flight History**: Optional trail display showing aircraft movement history
 - **Home Assistant Integration**: Seamless dashboard integration with ingress support
 - **Responsive UI**: Dark theme interface optimized for Home Assistant
-- **Configurable**: Customizable update intervals, map center, and display options
+- **Configurable**: Customizable update intervals, map center, default base map, and display options
 
 ## Installation Methods
 
 ### Method 1: Home Assistant Add-on (Recommended)
 
-1. Add this repository to your Home Assistant:
-   [![Add Repository](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Frandom-robbie%2Ftar1090-tracker)
+1. Add this repository to your Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ (top right) → Repositories**, then paste:
 
-2. Install the "Tar1090 Aircraft Tracker" add-on
-3. **Configure the add-on** by clicking on the "Configuration" tab:
-   - **Tar1090 Host**: Enter your tar1090 server IP (e.g., `192.168.1.100`)
+   ```
+   https://github.com/rainyvalley/tar1090-tracker
+   ```
+
+2. Install the **"Tar1090 Aircraft Tracker (Carto)"** add-on
+3. **Configure the add-on** on the "Configuration" tab:
+   - **Tar1090 Host**: Your tar1090 server IP (e.g. `192.168.1.100`)
    - **Tar1090 Port**: Usually `8080` (default)
-   - **Update Interval**: How often to fetch data in seconds (1-60)
+   - **Update Interval**: How often to fetch data, in seconds (1–60)
    - **Show History**: Enable/disable flight trails
-   - **Map Center**: Set your location coordinates for map centering
-   - **Map Zoom**: Initial zoom level (1=world view, 18=street level)
-   - **Auto Center**: Automatically center map on aircraft
-4. Click **Save** and then **Start** the add-on
-5. The add-on will appear in your sidebar with an airplane icon
+   - **Map Center**: Your location coordinates for map centering
+   - **Map Zoom**: Initial zoom level (1 = world view, 18 = street level)
+   - **Auto Center**: Automatically center the map on aircraft
+   - **Map Provider**: Default base map — `carto_light`, `carto_dark`, `carto_voyager`, or `esri_satellite`. Defaults to `carto_dark`. You can still switch layers live from the map's dropdown.
+4. Click **Save**, then **Start** the add-on
+5. The add-on appears in your sidebar with an airplane icon
+
+> **Running it as a local add-on instead?** Drop the `tar1090/` folder into `/addons/tar1090-carto/` on your HA host, then **Settings → Add-ons → Add-on Store → ⋮ → Check for updates**. It will appear under **Local add-ons**. After any edit to files under `/addons`, use **Rebuild** (not just Restart).
 
 ### Method 2: Standalone Installation
 
@@ -44,21 +59,30 @@ If the add-on method has issues, you can run it standalone:
    ```
 3. Download and run:
    ```bash
-   wget https://raw.githubusercontent.com/random-robbie/tar1090-tracker/main/simple-start.sh
+   wget https://raw.githubusercontent.com/rainyvalley/tar1090-tracker/main/simple-start.sh
    chmod +x simple-start.sh
    TAR1090_HOST=192.168.1.175 ./simple-start.sh
    ```
 4. Access at `http://your-ha-ip:8099`
 
+## Flight information links
+
+When you open an aircraft's popup, the **📡 View on FlightAware** link opens that aircraft on FlightAware. Ctrl+click or right-click on an aircraft marker opens the same page directly.
+
+- If a **registration** (tail number) is known, the link points to `https://www.flightaware.com/live/flight/<registration>`
+- Otherwise it falls back to the **callsign**: `https://www.flightaware.com/live/flight/<callsign>`
+
+Because FlightAware's `/live/flight/` endpoint resolves both registrations and callsigns, general-aviation tail numbers such as `N76KA` resolve correctly — unlike the upstream FlightRadar24 `/data/flights/` path, which only accepts airline flight numbers.
+
 ## Adding to Home Assistant Dashboard
 
-Once running (either method), integrate into your HA dashboard:
+Once running (either method), integrate it into your HA dashboard.
 
 ### Option 1: Webpage Card
 1. **Edit your dashboard**
 2. **Add Card → Webpage Card**
 3. **Settings:**
-   - **URL:** `http://your-ha-ip:8099` (for standalone) or use the add-on's ingress URL
+   - **URL:** `http://your-ha-ip:8099` (standalone) or the add-on's ingress URL
    - **Title:** `Aircraft Tracker`
    - **Aspect Ratio:** `16:9` (recommended)
 
@@ -71,13 +95,9 @@ Once running (either method), integrate into your HA dashboard:
    - **Icon:** `mdi:airplane`
 3. This creates a dedicated full-screen aircraft tracking tab
 
-### Option 3: Map Card Integration (Recommended for Dashboard)
+### Option 3: Native Map Card Integration
 
-The best way to integrate aircraft tracking into your Home Assistant dashboard is using the **Webpage Card** method (Option 1). However, if you want aircraft data as Home Assistant entities:
-
-#### Native Home Assistant Map Integration
-
-To show aircraft on Home Assistant's built-in map card, add this to your `configuration.yaml`:
+The Webpage Card (Option 1) is the best experience. If you'd rather have aircraft as Home Assistant entities on the built-in map card, add REST sensors and template device trackers to your `configuration.yaml`:
 
 ```yaml
 # Aircraft data sensor
@@ -91,14 +111,7 @@ sensor:
     unit_of_measurement: "aircraft"
     scan_interval: 2
 
-# Template device trackers for each aircraft
-template:
-  - sensor:
-      - name: "Aircraft Count"
-        state: "{{ state_attr('sensor.aircraft_data', 'aircraft') | length if state_attr('sensor.aircraft_data', 'aircraft') else 0 }}"
-        unit_of_measurement: "aircraft"
-
-# Device trackers for up to 10 aircraft
+# Device trackers for each aircraft (repeat the pattern for aircraft_1 … aircraft_10)
 device_tracker:
   - platform: template
     trackers:
@@ -124,47 +137,9 @@ device_tracker:
               "hex": "{{ aircraft[0].hex }}"
             }
           {% endif %}
-          
-      aircraft_2:
-        friendly_name: "Aircraft 2"
-        latitude_template: >
-          {% set aircraft = state_attr('sensor.aircraft_data', 'aircraft') %}
-          {% if aircraft and aircraft|length >= 2 and aircraft[1].lat %}
-            {{ aircraft[1].lat }}
-          {% endif %}
-        longitude_template: >
-          {% set aircraft = state_attr('sensor.aircraft_data', 'aircraft') %}
-          {% if aircraft and aircraft|length >= 2 and aircraft[1].lon %}
-            {{ aircraft[1].lon }}
-          {% endif %}
-        attributes_template: >
-          {% set aircraft = state_attr('sensor.aircraft_data', 'aircraft') %}
-          {% if aircraft and aircraft|length >= 2 %}
-            {
-              "callsign": "{{ aircraft[1].flight | default('Unknown') }}",
-              "altitude": "{{ aircraft[1].alt_baro | default('N/A') }} ft", 
-              "speed": "{{ aircraft[1].gs | default('N/A') }} kts",
-              "hex": "{{ aircraft[1].hex }}"
-            }
-          {% endif %}
-          
-      aircraft_3:
-        friendly_name: "Aircraft 3"
-        latitude_template: >
-          {% set aircraft = state_attr('sensor.aircraft_data', 'aircraft') %}
-          {% if aircraft and aircraft|length >= 3 and aircraft[2].lat %}
-            {{ aircraft[2].lat }}
-          {% endif %}
-        longitude_template: >
-          {% set aircraft = state_attr('sensor.aircraft_data', 'aircraft') %}
-          {% if aircraft and aircraft|length >= 3 and aircraft[2].lon %}
-            {{ aircraft[2].lon }}
-          {% endif %}
-          
-      # Add aircraft_4 through aircraft_10 following the same pattern...
 ```
 
-**Then add this map card to your dashboard:**
+**Then add a map card to your dashboard:**
 
 ```yaml
 type: map
@@ -172,51 +147,13 @@ entities:
   - device_tracker.aircraft_1
   - device_tracker.aircraft_2
   - device_tracker.aircraft_3
-  - device_tracker.aircraft_4
-  - device_tracker.aircraft_5
-  - device_tracker.aircraft_6
-  - device_tracker.aircraft_7
-  - device_tracker.aircraft_8
-  - device_tracker.aircraft_9
-  - device_tracker.aircraft_10
 auto_fit: true
 default_zoom: 8
 title: Live Aircraft Map
 theme_mode: auto
 ```
 
-**Note:** This method shows aircraft as points on the map but has limitations:
-- No flight trails or detailed aircraft information
-- Less interactive than the full web interface
-- Updates limited to Home Assistant's sensor scan intervals
-
-#### Using the Map Card
-For the best aircraft tracking experience in your dashboard:
-
-1. **Add a Webpage Card** (Option 1 above) - This shows the full interactive map
-2. **Set card height** to `400px` or more for better visibility
-3. **Position it prominently** on your main dashboard
-
-#### Alternative: Browser Mod Integration
-If you have [Browser Mod](https://github.com/thomasloven/hass-browser_mod) installed:
-
-```yaml
-# In a button card or automation
-service: browser_mod.popup
-data:
-  title: "Aircraft Tracker"
-  content:
-    type: iframe
-    url: "http://192.168.1.212:8099"
-    aspect_ratio: "16:9"
-```
-
-**Why Webpage Card is Recommended:**
-- ✅ Full interactive map with aircraft details
-- ✅ Real-time updates and flight trails  
-- ✅ Aircraft information on click
-- ✅ No complex configuration needed
-- ✅ Works immediately after tracker installation
+**Note:** the entity-based map card shows aircraft as points but has limitations — no flight trails or detailed aircraft info, and updates are limited to Home Assistant's sensor scan intervals. For the full interactive experience, use the Webpage Card.
 
 ## Configuration
 
@@ -228,71 +165,54 @@ show_history: true             # Show aircraft movement trails
 map_center_lat: 40.7128        # Map center latitude (your location)
 map_center_lon: -74.0060       # Map center longitude (your location)
 map_zoom: 8                    # Initial map zoom level (1-18)
+map_provider: "carto_dark"     # Default base map: carto_light | carto_dark | carto_voyager | esri_satellite
 ```
 
 ## API Endpoints
 
 The tracker provides several REST API endpoints:
 
-- `/api/aircraft` - Current aircraft data
-- `/api/history` - Historical aircraft positions (if enabled)
-- `/api/config` - Current configuration
-- `/api/health` - Service health status
-- `/api/stats` - Aircraft statistics
+- `/api/aircraft` — Current aircraft data
+- `/api/history` — Historical aircraft positions (if enabled)
+- `/api/config` — Current configuration
+- `/api/health` — Service health status
+- `/api/stats` — Aircraft statistics
 
 ## Requirements
 
-- A running tar1090 server (part of ADS-B aircraft tracking setup)
+- A running tar1090 server (part of an ADS-B aircraft tracking setup)
 - Network access from Home Assistant to the tar1090 server
-- For add-on: Home Assistant OS or Supervised installation
-- For standalone: Python 3 with Flask and Requests libraries
+- For the add-on: Home Assistant OS or Supervised installation
+- For standalone: Python 3 with Flask and Requests
 
 ## Troubleshooting
 
-### Add-on Not Appearing
+### Map tiles won't load
+This fork defaults to Carto specifically because OpenStreetMap's public tiles return HTTP 403 for self-hosted apps. If tiles still fail, switch the **Map Provider** to another Carto option or `esri_satellite` from the dropdown, and confirm the HA host has outbound internet access to `basemaps.cartocdn.com` / `server.arcgisonline.com`.
+
+### Add-on not appearing
 - Check Home Assistant logs for validation errors
-- Ensure repository URL is correct
+- Ensure the repository URL is correct
 - Try the standalone installation method
 
-### No Aircraft Data
-- Verify tar1090 server is running and accessible
-- Check network connectivity between HA and tar1090 server
-- Confirm tar1090_host and tar1090_port settings
+### No aircraft data
+- Verify the tar1090 server is running and reachable
+- Check network connectivity between HA and the tar1090 server
+- Confirm `tar1090_host` and `tar1090_port`
 
-### Dashboard Integration Issues
+### Dashboard integration issues
 - For ingress mode, use the add-on's internal URL
 - For standalone, use `http://your-ha-ip:8099`
-- Ensure HTTPS/HTTP protocol matches your HA setup
+- Ensure the HTTP/HTTPS protocol matches your HA setup
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes, new features, and bug fixes in each release.
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes in each release.
 
-## Contributing
+## Credits & License
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Original project: **[random-robbie/tar1090-tracker](https://github.com/random-robbie/tar1090-tracker)** by [random-robbie](https://github.com/random-robbie). Full credit for the original add-on goes to the upstream author.
+- Upstream tar1090 ADS-B interface: **[wiedehopf/tar1090](https://github.com/wiedehopf/tar1090)**.
+- This fork adds selectable Carto base maps and switches flight links from FlightRadar24 to FlightAware.
 
-### Release Process
-
-For maintainers, use the release script:
-```bash
-./scripts/release.sh 1.0.4 "Added new feature description"
-```
-
-This will:
-- Update version in config.yaml
-- Add changelog entry  
-- Create git tag
-- Push to GitHub
-- Trigger automated release
-
-## Support
-
-- **Issues & Bug Reports**: [GitHub Issues](https://github.com/random-robbie/tar1090-tracker/issues)
-- **Feature Requests**: [GitHub Issues](https://github.com/random-robbie/tar1090-tracker/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/random-robbie/tar1090-tracker/discussions)
-- **Changelog**: [CHANGELOG.md](CHANGELOG.md)
+Base map tiles are © OpenStreetMap contributors and © CARTO; satellite imagery © Esri. This add-on is distributed under the same **MIT License** as the upstream project; see the original repository for license terms.

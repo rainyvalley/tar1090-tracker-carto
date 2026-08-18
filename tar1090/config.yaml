@@ -1,6 +1,6 @@
 ---
 name: "Tar1090 Aircraft Tracker"
-version: "1.0.13"
+version: "1.0.14"
 slug: "tar1090"
 description: "Displays aircraft from tar1090 on an interactive map"
 arch:
@@ -26,6 +26,7 @@ options:
   map_center_lon: -3.2765
   map_zoom: 8
   auto_center: false
+  map_provider: carto_dark
 schema:
   tar1090_host: str
   tar1090_port: port
@@ -35,3 +36,4 @@ schema:
   map_center_lon: float
   map_zoom: int(1,18)
   auto_center: bool
+  map_provider: list(carto_light|carto_dark|carto_voyager|esri_satellite)

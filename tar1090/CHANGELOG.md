@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.14] - 2026-08-09
+
+### Added
+- `map_provider` option to select the default base map (`osm`, `carto_light`, `carto_dark`, `carto_voyager`, `esri_satellite`)
+- Carto Light / Dark / Voyager base layers, selectable live from the map dropdown
+
+### Changed
+- Default base map is now Carto Dark instead of OpenStreetMap, since OSM's public tile servers reject self-hosted apps with HTTP 403 under their tile usage policy
+
 ## [1.0.13] - 2025-07-30
 
 ### Fixed
