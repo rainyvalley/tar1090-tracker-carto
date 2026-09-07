@@ -12,6 +12,7 @@ MAP_CENTER_LON=$(bashio::config 'map_center_lon')
 MAP_ZOOM=$(bashio::config 'map_zoom')
 AUTO_CENTER=$(bashio::config 'auto_center')
 MAP_PROVIDER=$(bashio::config 'map_provider')
+CARTO_API_KEY=$(bashio::config 'carto_api_key')
 
 bashio::log.info "Starting Tar1090 Aircraft Tracker with Ingress..."
 bashio::log.info "Configuration debug:"
@@ -31,6 +32,7 @@ export MAP_CENTER_LON
 export MAP_ZOOM
 export AUTO_CENTER
 export MAP_PROVIDER
+export CARTO_API_KEY
 
 # Start the Python Flask app with ingress support
 cd /app
