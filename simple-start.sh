@@ -7,6 +7,7 @@ MAP_CENTER_LAT=${MAP_CENTER_LAT:-"40.7128"}
 MAP_CENTER_LON=${MAP_CENTER_LON:-"-74.0060"}
 WEB_PORT=${WEB_PORT:-"8099"}
 MAP_PROVIDER=${MAP_PROVIDER:-"carto_dark"}
+CARTO_API_KEY=${CARTO_API_KEY:-""}
 
 echo "Starting Tar1090 Aircraft Tracker..."
 echo "Connecting to tar1090 at ${TAR1090_HOST}:${TAR1090_PORT}"
@@ -21,6 +22,7 @@ export MAP_CENTER_LAT
 export MAP_CENTER_LON
 export MAP_ZOOM=8
 export MAP_PROVIDER
+export CARTO_API_KEY
 
 # Start Python Flask app
 cd /private/tmp/tar1090/tar1090/rootfs/app
