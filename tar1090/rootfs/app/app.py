@@ -51,6 +51,7 @@ UPDATE_INTERVAL = get_config_value('UPDATE_INTERVAL', 1, int)
 SHOW_HISTORY = get_config_value('SHOW_HISTORY', True, bool)
 AUTO_CENTER = get_config_value('AUTO_CENTER', False, bool)
 MAP_PROVIDER = get_config_value('MAP_PROVIDER', 'carto_dark')
+CARTO_API_KEY = get_config_value('CARTO_API_KEY', '')
 
 # Global variables to store aircraft data
 aircraft_data = {"aircraft": [], "now": 0, "messages": 0}
@@ -129,6 +130,7 @@ def get_config():
         "show_history": SHOW_HISTORY,
         "auto_center": AUTO_CENTER,
         "map_provider": MAP_PROVIDER,
+        "carto_api_key": CARTO_API_KEY,
         "map_center_lat": get_config_value('MAP_CENTER_LAT', 54.7023, float),
         "map_center_lon": get_config_value('MAP_CENTER_LON', -3.2765, float),
         "map_zoom": get_config_value('MAP_ZOOM', 8, int)
