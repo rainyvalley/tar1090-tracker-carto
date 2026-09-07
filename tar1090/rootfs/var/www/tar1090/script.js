@@ -50,7 +50,8 @@ class AircraftTracker {
             map_center_lon: -3.2765,
             map_zoom: 8,
             update_interval: 1,
-            map_provider: 'carto_dark'
+            map_provider: 'carto_dark',
+            carto_api_key: ''
         };
     }
 
@@ -63,20 +64,24 @@ class AircraftTracker {
 
         // Available base map providers. Carto is used by default because
         // OpenStreetMap's public tile servers reject (HTTP 403) traffic from
-        // self-hosted apps under their tile usage policy.
+        // self-hosted apps under their tile usage policy. Carto's raster tiles
+        // now require a free API key (carto.com/basemaps/apikey) or they render
+        // an "API KEY REQUIRED" watermark; supply it via the add-on config.
         const cartoAttr = '© OpenStreetMap contributors © CARTO';
+        const cartoKey = this.config.carto_api_key
+            ? '?key=' + encodeURIComponent(this.config.carto_api_key) : '';
         this.baseLayers = {
-            carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + cartoKey, {
                 maxZoom: 20,
                 subdomains: 'abcd',
                 attribution: cartoAttr
             }),
-            carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' + cartoKey, {
                 maxZoom: 20,
                 subdomains: 'abcd',
                 attribution: cartoAttr
             }),
-            carto_voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            carto_voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' + cartoKey, {
                 maxZoom: 20,
                 subdomains: 'abcd',
                 attribution: cartoAttr
@@ -87,12 +92,10 @@ class AircraftTracker {
             })
         };
 
-        // Apply the configured default provider (falls back to Carto Dark)
         const defaultProvider = this.baseLayers[this.config.map_provider]
             ? this.config.map_provider : 'carto_dark';
         this.setMapProvider(defaultProvider);
 
-        // Reflect the active provider in the selector
         const selector = document.getElementById('map-layer');
         if (selector) selector.value = defaultProvider;
 
