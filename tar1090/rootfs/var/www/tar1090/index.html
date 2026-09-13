@@ -20,7 +20,7 @@
     <div id="controls">
         <button id="toggle-history">Toggle History</button>
         <button id="center-map">Center Map</button>
-        <button id="toggle-list">Hide Aircraft List</button>
+        <button id="toggle-list" aria-expanded="false" aria-controls="aircraft-list">Show Aircraft List</button>
         <select id="map-layer">
             <option value="carto_light">Carto Light</option>
             <option value="carto_dark">Carto Dark</option>
@@ -29,11 +29,16 @@
         </select>
     </div>
     
-    <div id="map"></div>
-    
-    <div id="aircraft-list">
-        <h3>Aircraft List</h3>
-        <div id="aircraft-items"></div>
+    <div id="content">
+        <div id="map"></div>
+
+        <div id="aircraft-list" class="is-hidden" aria-hidden="true">
+            <div id="aircraft-list-header">
+                <h3>Aircraft List</h3>
+                <button id="close-list" type="button" aria-label="Close aircraft list">&times;</button>
+            </div>
+            <div id="aircraft-items"></div>
+        </div>
     </div>
     
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

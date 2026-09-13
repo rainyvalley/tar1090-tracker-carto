@@ -130,24 +130,31 @@ class AircraftTracker {
             );
         });
 
-        // Toggle aircraft list button
+        // Toggle aircraft list button (list starts hidden, see index.html)
         document.getElementById('toggle-list').addEventListener('click', () => {
             const aircraftList = document.getElementById('aircraft-list');
-            const toggleBtn = document.getElementById('toggle-list');
-            
-            if (aircraftList.style.display === 'none') {
-                aircraftList.style.display = 'block';
-                toggleBtn.textContent = 'Hide Aircraft List';
-            } else {
-                aircraftList.style.display = 'none';
-                toggleBtn.textContent = 'Show Aircraft List';
-            }
+            this.setAircraftListVisible(aircraftList.classList.contains('is-hidden'));
+        });
+
+        // Explicit close button on the list itself
+        document.getElementById('close-list').addEventListener('click', () => {
+            this.setAircraftListVisible(false);
         });
 
         // Map layer selector
         document.getElementById('map-layer').addEventListener('change', (e) => {
             this.setMapProvider(e.target.value);
         });
+    }
+
+    setAircraftListVisible(visible) {
+        const aircraftList = document.getElementById('aircraft-list');
+        const toggleBtn = document.getElementById('toggle-list');
+
+        aircraftList.classList.toggle('is-hidden', !visible);
+        aircraftList.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        toggleBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+        toggleBtn.textContent = visible ? 'Hide Aircraft List' : 'Show Aircraft List';
     }
 
     async fetchAPI(endpoint) {
