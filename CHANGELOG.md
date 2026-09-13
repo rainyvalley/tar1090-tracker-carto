@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.15] - 2026-09-13
+
+### Changed
+- Aircraft list is now **closed by default**; open it with the "Show Aircraft List" button
+- Aircraft list is anchored inside the map area instead of the page, so it no longer
+  overlaps the header or the control buttons
+
+### Added
+- Close (×) button on the aircraft list panel itself
+- Mobile layout (<= 768px): header and controls stack and wrap, buttons get a 40px
+  touch target, and the aircraft list docks as a bottom sheet capped at 45vh
+  instead of a fixed 300px panel covering the screen
+
+### Fixed
+- List toggle now uses a CSS class instead of an inline `display` style, so the
+  first tap no longer behaves backwards when the list starts hidden
+
 ## [1.0.12] - 2025-07-30
 
 ### Added
