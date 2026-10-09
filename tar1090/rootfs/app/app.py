@@ -135,7 +135,7 @@ TAR1090_URL = build_tar1090_url(TAR1090_HOST, TAR1090_PORT)
 # Upper bound on a single aircraft.json body. A busy feeder produces well
 # under 1 MB; anything far larger is a misconfiguration (e.g. an aggregator).
 MAX_RESPONSE_BYTES = 10 * 1024 * 1024
-HISTORY_LENGTH = 100
+HISTORY_LENGTH = 12  # snapshots kept for /api/history; the UI does not use them
 # Data older than this is treated as stale: the API stops serving aircraft
 # and health reports "degraded".
 STALE_AFTER = max(10, 3 * UPDATE_INTERVAL + 5)

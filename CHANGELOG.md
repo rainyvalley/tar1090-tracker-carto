@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Optional direct port (`5000/tcp`), off by default; enable it under the
+  add-on's Network settings for REST sensors or a plain iframe
+
 ### Fixed
 - The map no longer shows frozen aircraft as live when tar1090 stops answering:
   the API serves no aircraft once data is stale, `/api/health` reports
@@ -24,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release script and release workflow fixes
 
 ### Changed
+- `/api/history` keeps the last 12 snapshots instead of 100
+- Repository, maintainer and image labels point at rainyvalley/tar1090-tracker-carto
 - Base image moved from Alpine 3.18 (end of life) to 3.22
 - Served by Waitress instead of Flask's development server; quieter logs
 - Supervisor watchdog on `/ping`
