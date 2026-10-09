@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-08
+
+### Changed
+- Carto Light, Dark and Voyager now render from Carto's **vector** styles (Positron,
+  Dark Matter, Voyager GL) through MapLibre GL, bridged into the existing Leaflet map.
+  Since 2026-09-25 Carto's raster tiles show "API KEY REQUIRED" without a key; the
+  vector styles load without one, so the map works out of the box again.
+  Existing `map_provider` values are unchanged.
+- `carto_api_key` is now optional but recommended: when set, it is added to every
+  Carto request so the map keeps working if Carto extends the key requirement to vector
+- Leaflet, MapLibre GL (5.24.0) and maplibre-gl-leaflet (0.1.4) are bundled with the
+  add-on instead of loaded from unpkg
+- Python dependencies are installed from Alpine packages instead of unpinned pip
+
+### Added
+- Fallback for browsers without WebGL: Carto raster tiles when a key is set,
+  otherwise Esri satellite (unavailable providers are removed from the dropdown)
+- Console error, and switch to satellite, if Carto rejects the vector style (401/403)
+- Content-Security-Policy, `X-Content-Type-Options` and `Referrer-Policy` headers
+
+### Security
+- Escape aircraft data (callsign, registration, etc.) in popups and the aircraft list;
+  previously crafted values were injected as HTML
+- FlightAware links URL-encode the ident
+- `carto_api_key` is no longer written to the add-on log (startup no longer dumps
+  `options.json`, and config logging redacts it)
+
+### Removed
+- Unused `nginx`, `curl`, `jq`, `py3-pip` and `schedule` from the image
+
 ## [1.0.15] - 2026-09-13
 
 ### Changed
