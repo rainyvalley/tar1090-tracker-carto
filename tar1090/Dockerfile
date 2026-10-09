@@ -5,13 +5,15 @@ FROM $BUILD_FROM
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install requirements
-# Python deps come from Alpine packages rather than unpinned pip installs, so
-# rebuilds are reproducible for a given base image.
+# Python deps come from Alpine packages rather than pip, so they track the
+# base image's Alpine branch (security fixes included) instead of PyPI.
+# hadolint ignore=DL3018
 RUN \
     apk add --no-cache \
         python3 \
         py3-flask \
-        py3-requests
+        py3-requests \
+        py3-waitress
 
 # Copy root filesystem
 COPY rootfs /
@@ -48,8 +50,8 @@ LABEL \
     org.opencontainers.image.revision=${BUILD_REF} \
     org.opencontainers.image.version=${BUILD_VERSION}
 
-# Expose port
-EXPOSE 8099
+# Port the app listens on (reached through HA ingress)
+EXPOSE 5000
 
 # Run
 CMD ["/usr/bin/run.sh"]
