@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-09
+
+Trails toggle showing each aircraft's full flight path
+
 ### Added
 - **Trails** toggle in the toolbar draws where each aircraft has flown. The
   add-on records every aircraft's path (a point every 5 s, up to an hour), so
