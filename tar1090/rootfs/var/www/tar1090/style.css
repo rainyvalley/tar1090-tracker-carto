@@ -69,6 +69,15 @@ body {
     background-color: #0088cc;
 }
 
+/* Trails toggle: grey when off, blue when on */
+#controls #toggle-history:not(.active) {
+    background-color: #555;
+}
+
+#controls #toggle-history:not(.active):hover {
+    background-color: #666;
+}
+
 #controls select {
     background-color: #2d2d2d;
     color: white;
