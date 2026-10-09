@@ -16,7 +16,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 ## Features
 
 - **Real-time Aircraft Tracking**: Connect to your tar1090 server and display live aircraft positions
-- **Interactive Map**: Leaflet-based map with multiple Carto base layers plus satellite imagery
+- **Interactive Map**: Leaflet-based map with Carto vector base maps (rendered with MapLibre GL) plus satellite imagery
 - **Aircraft Details**: Click an aircraft for callsign, altitude, speed, and track — with a working **View on FlightAware** link
 - **Flight History**: Optional trail display showing aircraft movement history
 - **Home Assistant Integration**: Seamless dashboard integration with ingress support
@@ -43,6 +43,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
    - **Map Zoom**: Initial zoom level (1 = world view, 18 = street level)
    - **Auto Center**: Automatically center the map on aircraft
    - **Map Provider**: Default base map — `carto_light`, `carto_dark`, `carto_voyager`, or `esri_satellite`. Defaults to `carto_dark`. You can still switch layers live from the map's dropdown.
+   - **Carto API Key** (optional, recommended): a free key from [carto.com/basemaps](https://carto.com/basemaps). The Carto maps are drawn from Carto's vector styles, which currently load without a key; setting one keeps them working if Carto starts requiring it, and enables Carto raster tiles on browsers without WebGL.
 4. Click **Save**, then **Start** the add-on
 5. The add-on appears in your sidebar with an airplane icon
 
@@ -166,6 +167,7 @@ map_center_lat: 40.7128        # Map center latitude (your location)
 map_center_lon: -74.0060       # Map center longitude (your location)
 map_zoom: 8                    # Initial map zoom level (1-18)
 map_provider: "carto_dark"     # Default base map: carto_light | carto_dark | carto_voyager | esri_satellite
+carto_api_key: ""              # Optional Carto basemaps key (recommended, see below)
 ```
 
 ## API Endpoints
@@ -188,7 +190,12 @@ The tracker provides several REST API endpoints:
 ## Troubleshooting
 
 ### Map tiles won't load
-This fork defaults to Carto specifically because OpenStreetMap's public tiles return HTTP 403 for self-hosted apps. If tiles still fail, switch the **Map Provider** to another Carto option or `esri_satellite` from the dropdown, and confirm the HA host has outbound internet access to `basemaps.cartocdn.com` / `server.arcgisonline.com`.
+This fork defaults to Carto specifically because OpenStreetMap's public tiles return HTTP 403 for self-hosted apps. The Carto layers use Carto's vector styles via MapLibre GL, which needs WebGL in the browser.
+
+- **"API KEY REQUIRED" on the map**: you're seeing Carto raster tiles without a key (only used when the browser has no WebGL). Set `carto_api_key`, or use a browser with WebGL.
+- **Only "Satellite" in the dropdown**: the browser has no WebGL and no `carto_api_key` is set. The browser console says so.
+- **Map falls back to satellite on its own**: Carto rejected the vector style (HTTP 401/403), most likely because it now requires a key. Set `carto_api_key`.
+- Otherwise, confirm the viewing device can reach `basemaps.cartocdn.com`, `tiles.basemaps.cartocdn.com` and `server.arcgisonline.com`.
 
 ### Add-on not appearing
 - Check Home Assistant logs for validation errors
