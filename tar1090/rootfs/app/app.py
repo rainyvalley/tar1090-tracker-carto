@@ -16,9 +16,14 @@ from urllib.parse import urlsplit
 import requests
 from flask import Flask, jsonify, request, send_from_directory
 
+# The UI lives at <rootfs>/var/www/tar1090: /var/www/tar1090 in the image,
+# tar1090/rootfs/var/www/tar1090 when run from a checkout (simple-start.sh).
+STATIC_DIR = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '..', 'var', 'www', 'tar1090'))
+
 # Create Flask app with support for Home Assistant ingress. static_url_path=''
 # serves every file under the static folder from the site root.
-app = Flask(__name__, static_folder='/var/www/tar1090', static_url_path='')
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
 
 # Configure logging. Per-poll and per-request messages are DEBUG so the
 # Supervisor log is not flooded; connection changes are logged at INFO/WARNING.
