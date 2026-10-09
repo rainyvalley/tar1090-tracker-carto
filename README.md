@@ -30,7 +30,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 1. Add this repository to your Home Assistant: **Settings → Add-ons → Add-on Store → ⋮ (top right) → Repositories**, then paste:
 
    ```
-   https://github.com/rainyvalley/tar1090-tracker
+   https://github.com/rainyvalley/tar1090-tracker-carto
    ```
 
 2. Install the **"Tar1090 Aircraft Tracker (Carto)"** add-on
@@ -38,33 +38,33 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
    - **Tar1090 Host**: Your tar1090 server IP (e.g. `192.0.2.100`)
    - **Tar1090 Port**: Usually `8080` (default)
    - **Update Interval**: How often to fetch data, in seconds (1–60)
-   - **Show History**: Enable/disable flight trails
+   - **Show History**: Whether flight trails are shown when the map opens (toggle live with **Show/Hide History**)
    - **Map Center**: Your location coordinates for map centering
    - **Map Zoom**: Initial zoom level (1 = world view, 18 = street level)
-   - **Auto Center**: Automatically center the map on aircraft
+   - **Auto Center**: Keep the map fitted to the aircraft on every update. Panning or zooming pauses it; **Center Map** resumes it
    - **Map Provider**: Default base map — `carto_light`, `carto_dark`, `carto_voyager`, or `esri_satellite`. Defaults to `carto_dark`. You can still switch layers live from the map's dropdown.
-   - **Carto API Key** (optional, recommended): a free key from [carto.com/basemaps](https://carto.com/basemaps). The Carto maps are drawn from Carto's vector styles, which currently load without a key; setting one keeps them working if Carto starts requiring it, and enables Carto raster tiles on browsers without WebGL.
+   - **Carto API Key** (optional, recommended): a free key from [carto.com/basemaps](https://carto.com/basemaps). The Carto maps are drawn from Carto's vector styles, which currently load without a key; setting one keeps them working if Carto starts requiring it, and enables Carto raster tiles on browsers without WebGL. The key is used by your browser, so anyone who can open the panel can see it: restrict it to your domain in the Carto dashboard.
 4. Click **Save**, then **Start** the add-on
 5. The add-on appears in your sidebar with an airplane icon
 
 > **Running it as a local add-on instead?** Drop the `tar1090/` folder into `/addons/tar1090-carto/` on your HA host, then **Settings → Add-ons → Add-on Store → ⋮ → Check for updates**. It will appear under **Local add-ons**. After any edit to files under `/addons`, use **Rebuild** (not just Restart).
 
+The add-on is reached only through Home Assistant ingress (the sidebar panel); it does not publish a port on the host.
+
 ### Method 2: Standalone Installation
 
-If the add-on method has issues, you can run it standalone:
+To run it on any machine with Python 3, without the add-on:
 
-1. SSH into your Home Assistant system
-2. Install dependencies:
+1. Install dependencies (Alpine: `apk add --no-cache python3 py3-flask py3-requests py3-waitress`; elsewhere: `pip install flask requests waitress`)
+2. Clone this repository and start it:
    ```bash
-   apk add --no-cache py3-flask py3-requests
+   git clone https://github.com/rainyvalley/tar1090-tracker-carto.git
+   cd tar1090-tracker-carto
+   TAR1090_HOST=192.0.2.100 ./simple-start.sh
    ```
-3. Download and run:
-   ```bash
-   wget https://raw.githubusercontent.com/rainyvalley/tar1090-tracker/main/simple-start.sh
-   chmod +x simple-start.sh
-   TAR1090_HOST=192.0.2.175 ./simple-start.sh
-   ```
-4. Access at `http://your-ha-ip:8099`
+3. Open `http://<that-machine>:8099` (set `WEB_PORT` to change the port)
+
+All options from the Configuration section can be set as upper-case environment variables (`MAP_CENTER_LAT=...`). The standalone server has **no authentication** and listens on all interfaces; set `BIND_HOST=127.0.0.1` to keep it local, and don't forward the port to the internet.
 
 ## Flight information links
 
@@ -83,7 +83,7 @@ Once running (either method), integrate it into your HA dashboard.
 1. **Edit your dashboard**
 2. **Add Card → Webpage Card**
 3. **Settings:**
-   - **URL:** `http://your-ha-ip:8099` (standalone) or the add-on's ingress URL
+   - **URL:** `http://<standalone-host>:8099` (standalone) or the add-on's ingress URL
    - **Title:** `Aircraft Tracker`
    - **Aspect Ratio:** `16:9` (recommended)
 
@@ -91,20 +91,20 @@ Once running (either method), integrate it into your HA dashboard.
 1. **Settings → Dashboards → Add Dashboard**
 2. **Create new dashboard:**
    - **Type:** Panel (iframe)
-   - **URL:** `http://your-ha-ip:8099`
+   - **URL:** `http://<standalone-host>:8099` (standalone install)
    - **Title:** `Aircraft Tracker`
    - **Icon:** `mdi:airplane`
 3. This creates a dedicated full-screen aircraft tracking tab
 
 ### Option 3: Native Map Card Integration
 
-The Webpage Card (Option 1) is the best experience. If you'd rather have aircraft as Home Assistant entities on the built-in map card, add REST sensors and template device trackers to your `configuration.yaml`:
+The Webpage Card (Option 1) is the best experience. If you'd rather have aircraft as Home Assistant entities on the built-in map card, add REST sensors and template device trackers to your `configuration.yaml`. This needs a standalone install (Method 2), because the add-on is only reachable through ingress:
 
 ```yaml
 # Aircraft data sensor
 sensor:
   - platform: rest
-    resource: http://192.0.2.212:8099/api/aircraft
+    resource: http://<standalone-host>:8099/api/aircraft
     name: aircraft_data
     json_attributes:
       - aircraft
@@ -159,7 +159,7 @@ theme_mode: auto
 ## Configuration
 
 ```yaml
-tar1090_host: "192.0.2.175"  # IP address of your tar1090 server
+tar1090_host: "192.0.2.100"  # IP address or host name of your tar1090 server
 tar1090_port: 8080             # Port of your tar1090 server (usually 8080)
 update_interval: 1             # Data update interval in seconds (1-60)
 show_history: true             # Show aircraft movement trails
@@ -174,10 +174,10 @@ carto_api_key: ""              # Optional Carto basemaps key (recommended, see b
 
 The tracker provides several REST API endpoints:
 
-- `/api/aircraft` — Current aircraft data
-- `/api/history` — Historical aircraft positions (if enabled)
-- `/api/config` — Current configuration
-- `/api/health` — Service health status
+- `/api/aircraft` — Current aircraft data. `"stale": true` (and no aircraft) when tar1090 hasn't answered for a while
+- `/api/aircraft/history` (alias `/api/history`) — The last 100 aircraft.json snapshots, if `show_history` is on. `?limit=N` returns only the newest N
+- `/api/config` — Current configuration (includes `carto_api_key`, which the browser needs)
+- `/api/health` — Service health: `"status": "healthy"`, or `"degraded"` when tar1090 data is stale
 - `/api/stats` — Aircraft statistics
 
 ## Requirements
@@ -185,7 +185,7 @@ The tracker provides several REST API endpoints:
 - A running tar1090 server (part of an ADS-B aircraft tracking setup)
 - Network access from Home Assistant to the tar1090 server
 - For the add-on: Home Assistant OS or Supervised installation
-- For standalone: Python 3 with Flask and Requests
+- For standalone: Python 3 with Flask and Requests (Waitress recommended)
 
 ## Troubleshooting
 
@@ -205,11 +205,11 @@ This fork defaults to Carto specifically because OpenStreetMap's public tiles re
 ### No aircraft data
 - Verify the tar1090 server is running and reachable
 - Check network connectivity between HA and the tar1090 server
-- Confirm `tar1090_host` and `tar1090_port`
+- Confirm `tar1090_host` and `tar1090_port`. The header shows **tar1090 unreachable** when the add-on is running but can't get data from tar1090; the add-on log says why
 
 ### Dashboard integration issues
 - For ingress mode, use the add-on's internal URL
-- For standalone, use `http://your-ha-ip:8099`
+- For standalone, use `http://<standalone-host>:8099`
 - Ensure the HTTP/HTTPS protocol matches your HA setup
 
 ## Changelog
