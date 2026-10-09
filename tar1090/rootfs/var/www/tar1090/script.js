@@ -8,6 +8,7 @@ class AircraftTracker {
         this.trailLines = new Map();
         this.config = {};
         this.showHistory = false;
+        this.maxTrailPoints = 720;  // matches the add-on's TRAIL_MAX_POINTS
         this.lastAircraft = [];
         this.userMovedMap = false;
         this.autoFitting = false;
@@ -44,6 +45,11 @@ class AircraftTracker {
             };
         }
         this.showHistory = this.config.show_history === true;
+        // The viewer's own choice from the Trails button wins over the default
+        try {
+            const saved = localStorage.getItem('tar1090-trails');
+            if (saved === 'on' || saved === 'off') this.showHistory = saved === 'on';
+        } catch (e) { /* storage unavailable: keep the configured default */ }
     }
 
     initMap() {
@@ -189,13 +195,19 @@ class AircraftTracker {
         // Toggle history button (initial state comes from show_history)
         const historyBtn = document.getElementById('toggle-history');
         const setHistoryLabel = () => {
-            historyBtn.textContent = this.showHistory ? 'Hide History' : 'Show History';
+            historyBtn.textContent = this.showHistory ? 'Trails: On' : 'Trails: Off';
+            historyBtn.setAttribute('aria-pressed', String(this.showHistory));
+            historyBtn.classList.toggle('active', this.showHistory);
         };
         setHistoryLabel();
         historyBtn.addEventListener('click', () => {
             this.showHistory = !this.showHistory;
             setHistoryLabel();
+            try {
+                localStorage.setItem('tar1090-trails', this.showHistory ? 'on' : 'off');
+            } catch (e) { /* not remembered; fine */ }
             this.clearTrails();
+            if (this.showHistory) this.loadTrails();
         });
 
         // Center map button; also resumes auto-centering after a manual pan
@@ -276,6 +288,36 @@ class AircraftTracker {
         };
 
         await updateData();
+        if (this.showHistory) this.loadTrails();
+    }
+
+    // Draw each aircraft's path so far, as recorded by the add-on, so trails
+    // show where aircraft have been rather than only since the page opened.
+    async loadTrails() {
+        let data;
+        try {
+            data = await this.fetchAPI('trails');
+        } catch (error) {
+            console.warn('Could not load trails:', error);
+            return;
+        }
+        if (!this.showHistory || !data || typeof data.trails !== 'object' || data.trails === null) return;
+        Object.entries(data.trails).forEach(([hex, path]) => {
+            const marker = this.aircraftMarkers.get(hex);
+            if (!marker || !Array.isArray(path)) return;
+            const points = path.filter(p => Array.isArray(p) && p.length === 2
+                && Number.isFinite(p[0]) && Number.isFinite(p[1]));
+            if (points.length < 2) return;
+            // Keep any live points newer than the recorded path's end
+            const current = marker.getLatLng();
+            const last = points[points.length - 1];
+            if (last[0] !== current.lat || last[1] !== current.lng) points.push([current.lat, current.lng]);
+            this.trailPoints.set(hex, points.slice(-this.maxTrailPoints));
+            const old = this.trailLines.get(hex);
+            if (old) this.map.removeLayer(old);
+            this.trailLines.delete(hex);
+            this.updateTrail(hex, [current.lat, current.lng], this.getAircraftColor(marker.aircraft));
+        });
     }
 
     // Normalise one aircraft.json record. Returns null for records without
@@ -450,8 +492,7 @@ class AircraftTracker {
         const last = points[points.length - 1];
         if (!last || last[0] !== position[0] || last[1] !== position[1]) {
             points.push(position);
-            // Keep only last 50 positions to prevent performance issues
-            if (points.length > 50) points.shift();
+            if (points.length > this.maxTrailPoints) points.shift();
         }
 
         const line = this.trailLines.get(hex);

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Trails** toggle in the toolbar draws where each aircraft has flown. The
+  add-on records every aircraft's path (a point every 5 s, up to an hour), so
+  turning trails on, or opening the map, shows the whole path rather than
+  only what was seen since the page loaded. The choice is remembered per
+  browser; `show_history` sets the default. New endpoint `/api/trails`
+
 ## [1.2.1] - 2026-10-09
 
 Fix add-on start-up after 1.2.0 (Supervisor API forbidden)

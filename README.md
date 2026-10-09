@@ -18,7 +18,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 - **Real-time Aircraft Tracking**: Connect to your tar1090 server and display live aircraft positions
 - **Interactive Map**: Leaflet-based map with Carto vector base maps (rendered with MapLibre GL) plus satellite imagery
 - **Aircraft Details**: Click an aircraft for callsign, altitude, speed, and track — with a working **View on FlightAware** link
-- **Flight History**: Optional trail display showing aircraft movement history
+- **Flight Trails**: The **Trails** button in the toolbar draws the path each aircraft has flown (recorded by the add-on, up to an hour per aircraft), like tar1090's own tracks. Your choice is remembered in the browser
 - **Home Assistant Integration**: Seamless dashboard integration with ingress support
 - **Responsive UI**: Dark theme interface optimized for Home Assistant
 - **Configurable**: Customizable update intervals, map center, default base map, and display options
@@ -162,7 +162,7 @@ theme_mode: auto
 tar1090_host: "192.0.2.100"  # IP address or host name of your tar1090 server
 tar1090_port: 8080             # Port of your tar1090 server (usually 8080)
 update_interval: 1             # Data update interval in seconds (1-60)
-show_history: true             # Show aircraft movement trails
+show_history: true             # Trails on by default (the Trails button overrides it per browser)
 map_center_lat: 40.7128        # Map center latitude (your location)
 map_center_lon: -74.0060       # Map center longitude (your location)
 map_zoom: 8                    # Initial map zoom level (1-18)
@@ -175,6 +175,7 @@ carto_api_key: ""              # Optional Carto basemaps key (recommended, see b
 The tracker provides several REST API endpoints:
 
 - `/api/aircraft` — Current aircraft data. `"stale": true` (and no aircraft) when tar1090 hasn't answered for a while
+- `/api/trails` — Recorded flight path of each current aircraft: `{"trails": {"<hex>": [[lat, lon], ...]}}`
 - `/api/aircraft/history` (alias `/api/history`) — The last 12 aircraft.json snapshots, if `show_history` is on. `?limit=N` returns only the newest N
 - `/api/config` — Current configuration (includes `carto_api_key`, which the browser needs)
 - `/api/health` — Service health: `"status": "healthy"`, or `"degraded"` when tar1090 data is stale

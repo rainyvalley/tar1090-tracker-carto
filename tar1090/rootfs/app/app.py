@@ -146,6 +146,16 @@ aircraft_history = deque(maxlen=HISTORY_LENGTH)
 last_success = None  # time.monotonic() of the last good fetch
 data_lock = threading.Lock()
 
+# Per-aircraft flight paths for the UI's trail toggle, recorded server-side so
+# a browser that opens the map (or turns trails on) sees where each aircraft
+# has been, like tar1090's own tracks. A point is kept when the aircraft has
+# moved and TRAIL_MIN_SPACING seconds have passed; aircraft unseen for
+# TRAIL_EXPIRE seconds are dropped.
+TRAIL_MAX_POINTS = 720
+TRAIL_MIN_SPACING = 5
+TRAIL_EXPIRE = 300
+trails = {}  # hex -> {"points": [[lat, lon], ...], "last_point": t, "seen": t}
+
 
 def sanitize_aircraft_data(data):
     """Return data if it looks like tar1090's aircraft.json, else None."""
@@ -153,6 +163,34 @@ def sanitize_aircraft_data(data):
         return None
     data['aircraft'] = [a for a in data['aircraft'] if isinstance(a, dict)]
     return data
+
+
+def record_trails(aircraft, now):
+    """Add the latest positions to the trails; call with data_lock held."""
+    for ac in aircraft:
+        hex_id = str(ac.get('hex', '')).strip().lower()
+        lat, lon = ac.get('lat'), ac.get('lon')
+        if not hex_id or isinstance(lat, bool) or isinstance(lon, bool):
+            continue
+        if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+            continue
+        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+            continue
+        trail = trails.setdefault(hex_id, {"points": [], "last_point": 0, "seen": now})
+        trail["seen"] = now
+        points = trail["points"]
+        point = [round(lat, 5), round(lon, 5)]
+        if points and points[-1] == point:
+            continue
+        if points and now - trail["last_point"] < TRAIL_MIN_SPACING:
+            points[-1] = point  # keep the newest position without adding a point
+            continue
+        points.append(point)
+        trail["last_point"] = now
+        if len(points) > TRAIL_MAX_POINTS:
+            del points[0]
+    for hex_id in [h for h, t in trails.items() if now - t["seen"] > TRAIL_EXPIRE]:
+        del trails[hex_id]
 
 
 def fetch_aircraft_data():
@@ -203,6 +241,7 @@ def update_aircraft_data():
                 last_success = time.monotonic()
                 if SHOW_HISTORY:
                     aircraft_history.append(new_data)
+                record_trails(new_data['aircraft'], last_success)
             count = len(new_data['aircraft'])
             if connected is not True:
                 logger.info(f"Receiving data from tar1090 at {TAR1090_URL} ({count} aircraft)")
@@ -277,6 +316,17 @@ def get_aircraft_history():
     if limit is not None:
         history = history[-limit:] if limit > 0 else []
     return jsonify({"history": history})
+
+
+@app.route('/trails', methods=['GET'])
+@app.route('/api/trails', methods=['GET'])
+def get_trails():
+    """Flight path of every aircraft seen recently, as {hex: [[lat, lon], ...]}"""
+    with data_lock:
+        if data_is_stale():
+            return jsonify({"trails": {}, "stale": True})
+        data = {h: list(t["points"]) for h, t in trails.items() if len(t["points"]) > 1}
+    return jsonify({"trails": data, "stale": False})
 
 
 @app.route('/config', methods=['GET'])
