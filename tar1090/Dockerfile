@@ -5,17 +5,13 @@ FROM $BUILD_FROM
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 # Install requirements
+# Python deps come from Alpine packages rather than unpinned pip installs, so
+# rebuilds are reproducible for a given base image.
 RUN \
     apk add --no-cache \
-        nginx \
         python3 \
-        py3-pip \
-        curl \
-        jq \
-    && pip3 install --no-cache-dir \
-        flask \
-        requests \
-        schedule
+        py3-flask \
+        py3-requests
 
 # Copy root filesystem
 COPY rootfs /

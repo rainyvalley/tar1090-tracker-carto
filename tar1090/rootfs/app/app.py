@@ -17,6 +17,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration from environment variables with JSON fallback
+SECRET_KEYS = {'CARTO_API_KEY'}
+
 def get_config_value(key, default, value_type=str):
     """Get configuration value from env vars or options.json"""
     # First try environment variable
@@ -28,12 +30,12 @@ def get_config_value(key, default, value_type=str):
             with open('/data/options.json', 'r') as f:
                 config = json.load(f)
                 value = config.get(key.lower(), default)
-                logger.info(f"Read {key} from options.json: {value}")
+                logger.info(f"Read {key} from options.json: {'<set>' if key.upper() in SECRET_KEYS and value else value}")
         except:
             logger.warning(f"Could not read options.json, using default for {key}")
             value = default
     else:
-        logger.info(f"Read {key} from environment: {value}")
+        logger.info(f"Read {key} from environment: {'<set>' if key.upper() in SECRET_KEYS else value}")
     
     # Convert to proper type
     if value_type == int:
@@ -100,6 +102,31 @@ def update_aircraft_data():
             logger.error(f"Error in update thread: {e}")
         
         time.sleep(UPDATE_INTERVAL)
+
+# Content Security Policy for the UI. Basemaps load from Carto (vector style,
+# tiles, sprites, fonts) and Esri; MapLibre runs its tile workers from blob:
+# URLs. Inline styles are needed for Leaflet markers and popups. No
+# frame-ancestors / X-Frame-Options: the page is embedded by HA ingress.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.cartocdn.com https://server.arcgisonline.com",
+    "connect-src 'self' https://*.cartocdn.com",
+    "worker-src 'self' blob:",
+    "child-src blob:",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'none'",
+])
+
+@app.after_request
+def add_security_headers(response):
+    response.headers.setdefault('Content-Security-Policy', CONTENT_SECURITY_POLICY)
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+    return response
 
 # API routes - both with and without /api/ prefix for compatibility
 @app.route('/aircraft', methods=['GET'])

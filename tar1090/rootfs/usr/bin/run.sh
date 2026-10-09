@@ -19,8 +19,12 @@ bashio::log.info "Configuration debug:"
 bashio::log.info "TAR1090_HOST: ${TAR1090_HOST}"
 bashio::log.info "TAR1090_PORT: ${TAR1090_PORT}"
 bashio::log.info "UPDATE_INTERVAL: ${UPDATE_INTERVAL}"
-bashio::log.info "Options file content:"
-cat /data/options.json
+bashio::log.info "MAP_PROVIDER: ${MAP_PROVIDER}"
+if bashio::var.has_value "${CARTO_API_KEY}"; then
+    bashio::log.info "CARTO_API_KEY: set"
+else
+    bashio::log.info "CARTO_API_KEY: not set (Carto vector maps still work without one)"
+fi
 
 # Export environment variables for Python app
 export TAR1090_HOST
