@@ -274,6 +274,7 @@ Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and r
 - Documentation: [README.md](README.md)
 - Discussions: [GitHub Discussions](https://github.com/rainyvalley/tar1090-tracker-carto/discussions)
 
-[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/7b11673...v1.2.0
