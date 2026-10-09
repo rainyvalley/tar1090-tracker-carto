@@ -1,7 +1,5 @@
 #!/usr/bin/env bashio
 
-CONFIG_PATH=/data/options.json
-
 # Read configuration
 TAR1090_HOST=$(bashio::config 'tar1090_host')
 TAR1090_PORT=$(bashio::config 'tar1090_port')
@@ -38,6 +36,7 @@ export AUTO_CENTER
 export MAP_PROVIDER
 export CARTO_API_KEY
 
-# Start the Python Flask app with ingress support
-cd /app
-python3 app.py
+# Start the Python app with ingress support. exec so it receives SIGTERM
+# directly when the add-on is stopped.
+cd /app || bashio::exit.nok "Cannot change to /app"
+exec python3 app.py
