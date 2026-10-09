@@ -1,11 +1,17 @@
 class AircraftTracker {
     constructor() {
         this.map = null;
-        this.aircraftMarkers = {};
-        this.aircraftTrails = {};
+        // Maps keyed by aircraft hex (plain objects would resolve keys
+        // such as "__proto__" to Object.prototype).
+        this.aircraftMarkers = new Map();
+        this.trailPoints = new Map();
+        this.trailLines = new Map();
         this.config = {};
         this.showHistory = false;
-        
+        this.lastAircraft = [];
+        this.userMovedMap = false;
+        this.autoFitting = false;
+
         this.init();
     }
 
@@ -17,42 +23,27 @@ class AircraftTracker {
             this.startDataUpdates();
         } catch (error) {
             console.error('Failed to initialize:', error);
-            this.updateConnectionStatus(false);
+            this.updateConnectionStatus('disconnected');
         }
     }
 
     async loadConfig() {
-        // Simplified URL handling for ingress mode
-        const apiUrls = [
-            'config',                // Simple relative path (works best in ingress)
-            './config',              // Explicit relative path
-            '/config',               // Absolute path (fallback)
-            'api/config'             // With api prefix (fallback)
-        ];
-        
-        for (const url of apiUrls) {
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    this.config = await response.json();
-                    console.log('Config loaded from:', url);
-                    return;
-                }
-            } catch (error) {
-                console.warn(`Failed to load config from ${url}:`, error);
-            }
+        try {
+            this.config = await this.fetchAPI('config');
+        } catch (error) {
+            console.warn('Using default configuration:', error);
+            this.config = {
+                map_center_lat: 54.7023,
+                map_center_lon: -3.2765,
+                map_zoom: 8,
+                update_interval: 1,
+                show_history: true,
+                auto_center: false,
+                map_provider: 'carto_dark',
+                carto_api_key: ''
+            };
         }
-        
-        // If all fail, use defaults
-        console.warn('Using default configuration');
-        this.config = {
-            map_center_lat: 54.7023,
-            map_center_lon: -3.2765,
-            map_zoom: 8,
-            update_interval: 1,
-            map_provider: 'carto_dark',
-            carto_api_key: ''
-        };
+        this.showHistory = this.config.show_history === true;
     }
 
     initMap() {
@@ -166,6 +157,8 @@ class AircraftTracker {
             console.error('Failed to show map provider ' + id + ':', error);
             if (this.map.hasLayer(next)) this.map.removeLayer(next);
             if (id !== 'esri_satellite') return this.setMapProvider('esri_satellite');
+            this.currentBaseLayer = null;
+            return null;
         }
         if (typeof next.getMaplibreMap === 'function') this.watchVectorLayer(id, next);
         this.currentBaseLayer = next;
@@ -193,20 +186,30 @@ class AircraftTracker {
     }
 
     setupEventListeners() {
-        // Toggle history button
-        document.getElementById('toggle-history').addEventListener('click', () => {
+        // Toggle history button (initial state comes from show_history)
+        const historyBtn = document.getElementById('toggle-history');
+        const setHistoryLabel = () => {
+            historyBtn.textContent = this.showHistory ? 'Hide History' : 'Show History';
+        };
+        setHistoryLabel();
+        historyBtn.addEventListener('click', () => {
             this.showHistory = !this.showHistory;
-            document.getElementById('toggle-history').textContent = 
-                this.showHistory ? 'Hide History' : 'Show History';
+            setHistoryLabel();
             this.clearTrails();
         });
 
-        // Center map button
+        // Center map button; also resumes auto-centering after a manual pan
         document.getElementById('center-map').addEventListener('click', () => {
             this.map.setView(
                 [this.config.map_center_lat, this.config.map_center_lon], 
                 this.config.map_zoom
             );
+            this.userMovedMap = false;
+        });
+
+        // auto_center follows the aircraft until the user pans or zooms
+        this.map.on('dragstart zoomstart', () => {
+            if (!this.autoFitting) this.userMovedMap = true;
         });
 
         // Toggle aircraft list button (list starts hidden, see index.html)
@@ -234,32 +237,25 @@ class AircraftTracker {
         aircraftList.setAttribute('aria-hidden', visible ? 'false' : 'true');
         toggleBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
         toggleBtn.textContent = visible ? 'Hide Aircraft List' : 'Show Aircraft List';
+        if (visible) this.updateAircraftList(this.lastAircraft);
     }
 
     async fetchAPI(endpoint) {
-        // Simplified URL handling for ingress mode
-        const apiUrls = [
-            endpoint,                // Simple relative path (works best in ingress)
-            `./${endpoint}`,         // Explicit relative path
-            `/${endpoint}`,          // Absolute path (fallback)
-            `api/${endpoint}`        // With api prefix (fallback)
-        ];
-        
-        for (const url of apiUrls) {
-            try {
-                const response = await fetch(url);
-                if (response.ok) {
-                    return await response.json();
-                }
-            } catch (error) {
-                console.warn(`Failed to fetch from ${url}:`, error);
-            }
+        // Relative URL only: under HA ingress the page lives below
+        // /api/hassio_ingress/<token>/, so absolute paths would hit HA itself.
+        const options = { cache: 'no-store' };
+        if (typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function') {
+            options.signal = AbortSignal.timeout(10000);
         }
-        
-        throw new Error(`Failed to fetch ${endpoint} from all URLs`);
+        const response = await fetch(endpoint, options);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ${endpoint}: HTTP ${response.status}`);
+        }
+        return response.json();
     }
 
     async startDataUpdates() {
+        const interval = Math.max(1, Number(this.config.update_interval) || 1) * 1000;
         const updateData = async () => {
             try {
                 const [aircraftData, statsData] = await Promise.all([
@@ -269,183 +265,231 @@ class AircraftTracker {
 
                 this.updateAircraft(aircraftData);
                 this.updateStats(statsData);
-                this.updateConnectionStatus(true);
+                this.updateConnectionStatus(aircraftData.stale || statsData.stale ? 'stale' : 'connected');
             } catch (error) {
                 console.error('Failed to fetch data:', error);
-                this.updateConnectionStatus(false);
+                this.updateConnectionStatus('disconnected');
             }
+            // Schedule the next poll only after this one finished, so slow
+            // responses can't pile up or arrive out of order.
+            setTimeout(updateData, interval);
         };
 
-        // Initial update
         await updateData();
-        
-        // Set up periodic updates
-        setInterval(updateData, this.config.update_interval * 1000);
+    }
+
+    // Normalise one aircraft.json record. Returns null for records without
+    // a usable ICAO hex so one malformed entry can't break the whole update.
+    normalizeAircraft(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        const hex = String(raw.hex ?? '').trim().toLowerCase();
+        if (!/^~?[0-9a-f]{6}$/.test(hex)) return null;
+        const num = (v) => {
+            if (v === null || v === undefined || v === '' || typeof v === 'boolean') return null;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+        };
+        const str = (v) => String(v ?? '').trim();
+        const onGround = raw.alt_baro === 'ground';
+        const lat = num(raw.lat);
+        const lon = num(raw.lon);
+        return {
+            hex,
+            flight: str(raw.flight),
+            registration: str(raw.r ?? raw.reg),
+            type: str(raw.t),
+            category: str(raw.category),
+            squawk: str(raw.squawk),
+            lat: lat !== null && Math.abs(lat) <= 90 ? lat : null,
+            lon: lon !== null && Math.abs(lon) <= 180 ? lon : null,
+            onGround,
+            altitude: onGround ? 0 : (num(raw.alt_baro) ?? num(raw.alt_geom)),
+            gs: num(raw.gs),
+            track: num(raw.track)
+        };
     }
 
     updateAircraft(data) {
-        const currentAircraft = data.aircraft || [];
-        const currentHexIds = new Set(currentAircraft.map(a => a.hex));
+        const records = data && Array.isArray(data.aircraft) ? data.aircraft : [];
+        const currentAircraft = [];
+        const seen = new Set();
+        records.forEach((raw) => {
+            const ac = this.normalizeAircraft(raw);
+            if (ac && !seen.has(ac.hex)) {
+                seen.add(ac.hex);
+                currentAircraft.push(ac);
+            }
+        });
 
         // Remove aircraft that are no longer present
-        Object.keys(this.aircraftMarkers).forEach(hex => {
-            if (!currentHexIds.has(hex)) {
+        Array.from(this.aircraftMarkers.keys()).forEach(hex => {
+            if (!seen.has(hex)) {
                 this.removeAircraft(hex);
             }
         });
 
         // Update or add aircraft
         currentAircraft.forEach(aircraft => {
-            this.updateAircraftMarker(aircraft);
+            try {
+                this.updateAircraftMarker(aircraft);
+            } catch (error) {
+                console.error('Failed to update aircraft ' + aircraft.hex + ':', error);
+            }
         });
 
+        this.autoCenterOnAircraft(currentAircraft);
         this.updateAircraftList(currentAircraft);
+    }
+
+    autoCenterOnAircraft(aircraft) {
+        if (!this.config.auto_center || this.userMovedMap) return;
+        const points = aircraft.filter(a => a.lat !== null && a.lon !== null).map(a => [a.lat, a.lon]);
+        if (points.length === 0) return;
+        this.autoFitting = true;
+        try {
+            this.map.fitBounds(L.latLngBounds(points), {
+                padding: [40, 40],
+                maxZoom: Number(this.config.map_zoom) || 12,
+                animate: false
+            });
+        } finally {
+            this.autoFitting = false;
+        }
+    }
+
+    createAircraftIcon(size, color) {
+        return L.divIcon({
+            html: `<div class="aircraft-icon-container" style="width: ${size}px; height: ${size}px;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" style="display: block;">
+                    <path fill="${color}" stroke="#000" stroke-width="1.5" d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z"/>
+                    <path fill="#ffffff" stroke="none" d="M19,15V14L12.5,10V4A1,1 0 0,0 11.5,3A1,1 0 0,0 10.5,4V10L4,14V15L10.5,13V18L9,19V20L11.5,19.5L14,20V19L12.5,18V13L19,15Z"/>
+                </svg>
+            </div>`,
+            className: 'aircraft-marker',
+            iconSize: [size, size],
+            iconAnchor: [size / 2, size / 2]
+        });
+    }
+
+    applyRotation(marker, track) {
+        if (track !== null) {
+            // Turn the shortest way (e.g. 359 -> 1 degrees) so the CSS
+            // transition doesn't spin the icon all the way round.
+            const prev = marker.rotation ?? track;
+            marker.rotation = prev + ((((track - prev) % 360) + 540) % 360) - 180;
+        }
+        const container = marker.getElement()?.querySelector('.aircraft-icon-container');
+        if (container) container.style.setProperty('--rot', `${marker.rotation ?? 0}deg`);
     }
 
     updateAircraftMarker(aircraft) {
         const hex = aircraft.hex;
-        
-        // Skip aircraft without position
-        if (!aircraft.lat || !aircraft.lon) return;
+        let marker = this.aircraftMarkers.get(hex);
+
+        // No position (any more): don't leave a frozen marker behind
+        if (aircraft.lat === null || aircraft.lon === null) {
+            if (marker) this.removeAircraft(hex);
+            return;
+        }
 
         const position = [aircraft.lat, aircraft.lon];
-        
-        if (this.aircraftMarkers[hex]) {
-            // Update existing marker
-            const marker = this.aircraftMarkers[hex];
-            const oldPos = marker.getLatLng();
+        const iconSize = this.getAircraftIconSize(aircraft);
+        const color = this.getAircraftColor(aircraft);
+        const iconKey = iconSize + '|' + color;
+
+        if (marker) {
             marker.setLatLng(position);
-            
-            // Update rotation if track is available
-            if (aircraft.track !== undefined) {
-                const iconContainer = marker.getElement()?.querySelector('.aircraft-icon-container');
-                if (iconContainer) {
-                    iconContainer.style.transform = `rotate(${Number(aircraft.track) || 0}deg)`;
-                }
+            // Colour follows altitude and size may change once the type is known
+            if (marker.iconKey !== iconKey) {
+                marker.setIcon(this.createAircraftIcon(iconSize, color));
+                marker.iconKey = iconKey;
             }
-            
-            // Update trail if history is enabled
-            if (this.showHistory) {
-                this.updateTrail(hex, [oldPos.lat, oldPos.lng], position);
-            }
-            
-            // Update popup content
             marker.setPopupContent(this.createPopupContent(aircraft));
         } else {
-            // Create aircraft icon with proper rotation and size based on aircraft type
-            const iconSize = this.getAircraftIconSize(aircraft);
-            const rotation = Number(aircraft.track) || 0;
-            const color = this.getAircraftColor(aircraft);
-            
-            const aircraftIcon = L.divIcon({
-                html: `<div class="aircraft-icon-container" style="transform: rotate(${rotation}deg); width: ${iconSize}px; height: ${iconSize}px;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${iconSize}" height="${iconSize}" style="display: block;">
-                        <path fill="${color}" stroke="#000" stroke-width="1.5" d="M21,16V14L13,9V3.5A1.5,1.5 0 0,0 11.5,2A1.5,1.5 0 0,0 10,3.5V9L2,14V16L10,13.5V19L8,20.5V22L11.5,21L15,22V20.5L13,19V13.5L21,16Z"/>
-                        <path fill="#ffffff" stroke="none" d="M19,15V14L12.5,10V4A1,1 0 0,0 11.5,3A1,1 0 0,0 10.5,4V10L4,14V15L10.5,13V18L9,19V20L11.5,19.5L14,20V19L12.5,18V13L19,15Z"/>
-                    </svg>
-                </div>`,
-                className: 'aircraft-marker',
-                iconSize: [iconSize, iconSize],
-                iconAnchor: [iconSize/2, iconSize/2]
-            });
-
-            // Create new marker
-            const marker = L.marker(position, { icon: aircraftIcon });
+            marker = L.marker(position, { icon: this.createAircraftIcon(iconSize, color) });
+            marker.iconKey = iconKey;
             marker.bindPopup(this.createPopupContent(aircraft));
-            
-            // Add click handler for FlightAware 
+
+            // Ctrl+click opens FlightAware directly
             marker.on('click', (e) => {
-                // Right-click or Ctrl+click to open FlightAware directly
-                if (e.originalEvent.ctrlKey || e.originalEvent.button === 2) {
+                if (e.originalEvent.ctrlKey) {
                     e.originalEvent.preventDefault();
-                    const url = this.flightAwareUrl(aircraft);
+                    const url = this.flightAwareUrl(marker.aircraft);
                     if (url) window.open(url, '_blank', 'noopener,noreferrer');
                 }
             });
-            
-            // Add context menu (right-click) handler
+
+            // Right-click opens FlightAware directly
             marker.on('contextmenu', (e) => {
                 e.originalEvent.preventDefault();
-                const url = this.flightAwareUrl(aircraft);
+                const url = this.flightAwareUrl(marker.aircraft);
                 if (url) window.open(url, '_blank', 'noopener,noreferrer');
             });
-            
+
             marker.addTo(this.map);
-            this.aircraftMarkers[hex] = marker;
-            
-            // Initialize trail
-            if (this.showHistory) {
-                this.aircraftTrails[hex] = [position];
-            }
+            this.aircraftMarkers.set(hex, marker);
+        }
+
+        // Handlers read the latest data (callsign/registration arrive late)
+        marker.aircraft = aircraft;
+        this.applyRotation(marker, aircraft.track);
+
+        if (this.showHistory) {
+            this.updateTrail(hex, position, color);
         }
     }
 
-    updateTrail(hex, oldPos, newPos) {
-        if (!this.aircraftTrails[hex]) {
-            this.aircraftTrails[hex] = [];
+    updateTrail(hex, position, color) {
+        let points = this.trailPoints.get(hex);
+        if (!points) {
+            points = [];
+            this.trailPoints.set(hex, points);
         }
-        
-        this.aircraftTrails[hex].push(newPos);
-        
-        // Keep only last 50 positions to prevent performance issues
-        if (this.aircraftTrails[hex].length > 50) {
-            this.aircraftTrails[hex].shift();
+
+        // Only record actual movement
+        const last = points[points.length - 1];
+        if (!last || last[0] !== position[0] || last[1] !== position[1]) {
+            points.push(position);
+            // Keep only last 50 positions to prevent performance issues
+            if (points.length > 50) points.shift();
         }
-        
-        // Remove existing trail polyline
-        if (this.aircraftTrails[hex + '_line']) {
-            this.map.removeLayer(this.aircraftTrails[hex + '_line']);
-        }
-        
-        // Draw new trail
-        if (this.aircraftTrails[hex].length > 1) {
-            const trail = L.polyline(this.aircraftTrails[hex], {
-                color: this.getAircraftColor({ hex }),
-                weight: 2,
-                opacity: 0.6
-            });
+
+        const line = this.trailLines.get(hex);
+        if (line) {
+            line.setLatLngs(points);
+            line.setStyle({ color });
+        } else if (points.length > 1) {
+            const trail = L.polyline(points, { color, weight: 2, opacity: 0.6 });
             trail.addTo(this.map);
-            this.aircraftTrails[hex + '_line'] = trail;
+            this.trailLines.set(hex, trail);
         }
     }
 
     removeAircraft(hex) {
-        // Remove marker
-        if (this.aircraftMarkers[hex]) {
-            this.map.removeLayer(this.aircraftMarkers[hex]);
-            delete this.aircraftMarkers[hex];
+        const marker = this.aircraftMarkers.get(hex);
+        if (marker) {
+            this.map.removeLayer(marker);
+            this.aircraftMarkers.delete(hex);
         }
-        
-        // Remove trail
-        if (this.aircraftTrails[hex + '_line']) {
-            this.map.removeLayer(this.aircraftTrails[hex + '_line']);
-            delete this.aircraftTrails[hex + '_line'];
+
+        const line = this.trailLines.get(hex);
+        if (line) {
+            this.map.removeLayer(line);
+            this.trailLines.delete(hex);
         }
-        
-        delete this.aircraftTrails[hex];
+        this.trailPoints.delete(hex);
     }
 
     clearTrails() {
-        Object.keys(this.aircraftTrails).forEach(key => {
-            if (key.endsWith('_line')) {
-                this.map.removeLayer(this.aircraftTrails[key]);
-                delete this.aircraftTrails[key];
-            }
-        });
-        
-        if (!this.showHistory) {
-            Object.keys(this.aircraftTrails).forEach(hex => {
-                if (!hex.endsWith('_line')) {
-                    delete this.aircraftTrails[hex];
-                }
-            });
-        }
+        this.trailLines.forEach(line => this.map.removeLayer(line));
+        this.trailLines.clear();
+        this.trailPoints.clear();
     }
 
     getAircraftColor(aircraft) {
         // Color based on altitude
-        const altitude = aircraft.alt_baro || aircraft.alt_geom || 0;
-        
+        const altitude = aircraft.altitude ?? 0;  // on ground counts as 0
+
         if (altitude < 5000) return '#ff4444';      // Red - Low altitude
         if (altitude < 15000) return '#ffaa00';     // Orange - Medium altitude  
         if (altitude < 25000) return '#00aaff';     // Blue - High altitude
@@ -454,8 +498,8 @@ class AircraftTracker {
 
     getAircraftIconSize(aircraft) {
         // Size based on aircraft category or type - optimized for Material Design icon
-        const category = aircraft.category || '';
-        const type = aircraft.t || '';
+        const category = aircraft.category;
+        const type = aircraft.type;
         
         // Large aircraft (A380, B747, etc.)
         if (type.includes('A38') || type.includes('B74') || category === 'A7') return 32;
@@ -482,35 +526,36 @@ class AircraftTracker {
     }
 
     flightAwareUrl(aircraft) {
-        const registration = aircraft.r || aircraft.reg;
-        const callsign = aircraft.flight ? aircraft.flight.trim() : null;
-        const ident = registration || callsign;
+        const ident = aircraft && (aircraft.registration || aircraft.flight);
         return ident ? 'https://www.flightaware.com/live/flight/' + encodeURIComponent(ident) : null;
+    }
+
+    formatAltitude(aircraft) {
+        if (aircraft.onGround) return 'Ground';
+        return aircraft.altitude !== null ? `${aircraft.altitude} ft` : 'N/A';
     }
 
     createPopupContent(aircraft) {
         const esc = (v) => this.escapeHtml(v);
-        const callsign = aircraft.flight ? aircraft.flight.trim() : 'N/A';
-        const altitude = aircraft.alt_baro || aircraft.alt_geom || 'N/A';
-        const speed = aircraft.gs || 'N/A';
-        const track = aircraft.track || 'N/A';
+        const callsign = aircraft.flight || 'N/A';
+        const speed = aircraft.gs !== null ? `${aircraft.gs} kts` : 'N/A';
+        const track = aircraft.track !== null ? `${aircraft.track}°` : 'N/A';
         const squawk = aircraft.squawk || 'N/A';
-        const registration = aircraft.r || aircraft.reg || 'N/A';
-        
+
         // Create FlightAware link if we have registration or callsign
         const faUrl = this.flightAwareUrl(aircraft);
         const fr24Link = faUrl
             ? `<div style="margin-top: 8px;"><a href="${esc(faUrl)}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`
             : '';
-        
+
         return `
             <div class="popup-callsign">${esc(callsign)}</div>
             <div class="popup-details">
                 <div><strong>Hex:</strong> ${esc(aircraft.hex)}</div>
-                ${registration !== 'N/A' ? `<div><strong>Registration:</strong> ${esc(registration)}</div>` : ''}
-                <div><strong>Altitude:</strong> ${esc(altitude)} ft</div>
-                <div><strong>Speed:</strong> ${esc(speed)} kts</div>
-                <div><strong>Track:</strong> ${esc(track)}°</div>
+                ${aircraft.registration ? `<div><strong>Registration:</strong> ${esc(aircraft.registration)}</div>` : ''}
+                <div><strong>Altitude:</strong> ${esc(this.formatAltitude(aircraft))}</div>
+                <div><strong>Speed:</strong> ${esc(speed)}</div>
+                <div><strong>Track:</strong> ${esc(track)}</div>
                 <div><strong>Squawk:</strong> ${esc(squawk)}</div>
                 ${aircraft.category ? `<div><strong>Category:</strong> ${esc(aircraft.category)}</div>` : ''}
                 ${fr24Link}
@@ -519,40 +564,51 @@ class AircraftTracker {
     }
 
     updateAircraftList(aircraft) {
+        this.lastAircraft = aircraft;
+        // Nothing to draw while the list is hidden
+        const list = document.getElementById('aircraft-list');
+        if (list.classList.contains('is-hidden')) return;
+
         const listContainer = document.getElementById('aircraft-items');
         listContainer.innerHTML = '';
-        
+
         // Sort by callsign, then by hex
-        aircraft.sort((a, b) => {
-            const aCall = a.flight ? a.flight.trim() : a.hex;
-            const bCall = b.flight ? b.flight.trim() : b.hex;
-            return aCall.localeCompare(bCall);
-        });
-        
-        aircraft.forEach(ac => {
+        const label = (ac) => ac.flight || ac.hex;
+        const sorted = aircraft.slice().sort((a, b) => label(a).localeCompare(label(b)));
+
+        sorted.forEach(ac => {
             const item = document.createElement('div');
             item.className = 'aircraft-item';
-            
-            const callsign = ac.flight ? ac.flight.trim() : ac.hex;
-            const altitude = ac.alt_baro || ac.alt_geom || 'N/A';
-            const speed = ac.gs || 'N/A';
-            
+            item.tabIndex = 0;
+            item.setAttribute('role', 'button');
+
+            const speed = ac.gs !== null ? `${ac.gs} kts` : 'N/A';
+
             item.innerHTML = `
-                <div class="aircraft-callsign">${this.escapeHtml(callsign)}</div>
+                <div class="aircraft-callsign">${this.escapeHtml(label(ac))}</div>
                 <div class="aircraft-details">
-                    <span class="aircraft-altitude">${this.escapeHtml(altitude)} ft</span> | 
-                    <span class="aircraft-speed">${this.escapeHtml(speed)} kts</span>
+                    <span class="aircraft-altitude">${this.escapeHtml(this.formatAltitude(ac))}</span> | 
+                    <span class="aircraft-speed">${this.escapeHtml(speed)}</span>
                 </div>
             `;
-            
-            // Click to center on aircraft
-            item.addEventListener('click', () => {
-                if (ac.lat && ac.lon && this.aircraftMarkers[ac.hex]) {
-                    this.map.setView([ac.lat, ac.lon], 12);
-                    this.aircraftMarkers[ac.hex].openPopup();
+
+            // Click (or Enter/Space) to center on aircraft
+            const focusAircraft = () => {
+                const marker = this.aircraftMarkers.get(ac.hex);
+                if (marker) {
+                    this.userMovedMap = true;
+                    this.map.setView(marker.getLatLng(), 12);
+                    marker.openPopup();
+                }
+            };
+            item.addEventListener('click', focusAircraft);
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    focusAircraft();
                 }
             });
-            
+
             listContainer.appendChild(item);
         });
     }
@@ -567,10 +623,13 @@ class AircraftTracker {
             `Last update: ${lastUpdate}`;
     }
 
-    updateConnectionStatus(connected) {
+    // state: 'connected', 'stale' (add-on up, tar1090 unreachable) or
+    // 'disconnected' (add-on unreachable)
+    updateConnectionStatus(state) {
         const statusElement = document.getElementById('connection-status');
-        statusElement.textContent = connected ? 'Connected' : 'Disconnected';
-        statusElement.className = connected ? 'status-connected' : 'status-disconnected';
+        const labels = { connected: 'Connected', stale: 'tar1090 unreachable', disconnected: 'Disconnected' };
+        statusElement.textContent = labels[state] || labels.disconnected;
+        statusElement.className = state === 'connected' ? 'status-connected' : 'status-disconnected';
     }
 }
 
