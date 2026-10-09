@@ -319,6 +319,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No known vulnerabilities in current versions
 
 ### Support
-- Report issues: [GitHub Issues](https://github.com/random-robbie/tar1090-tracker/issues)
+- Report issues: [GitHub Issues](https://github.com/rainyvalley/tar1090-tracker-carto/issues)
 - Documentation: [README.md](README.md)
-- Discussions: [GitHub Discussions](https://github.com/random-robbie/tar1090-tracker/discussions)
+- Discussions: [GitHub Discussions](https://github.com/rainyvalley/tar1090-tracker-carto/discussions)
+
+[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/7b11673...v1.2.0
