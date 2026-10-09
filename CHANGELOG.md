@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-09
+
+Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and release fixes
+
 ### Added
 - Optional direct port (`5000/tcp`), off by default; enable it under the
   add-on's Network settings for REST sensors or a plain iframe
