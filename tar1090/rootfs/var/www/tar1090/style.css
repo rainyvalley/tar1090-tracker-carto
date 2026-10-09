@@ -147,8 +147,14 @@ body {
     cursor: pointer;
 }
 
-.aircraft-item:hover {
+.aircraft-item:hover,
+.aircraft-item:focus-visible {
     background-color: rgba(0, 170, 255, 0.3);
+}
+
+.aircraft-item:focus-visible {
+    outline: 2px solid #00aaff;
+    outline-offset: 1px;
 }
 
 .aircraft-callsign {
@@ -200,14 +206,6 @@ body {
     margin-bottom: 2px;
 }
 
-/* Aircraft trail styling */
-.aircraft-trail {
-    stroke: #00aaff;
-    stroke-width: 2;
-    stroke-opacity: 0.6;
-    fill: none;
-}
-
 /* Aircraft icon styling */
 .aircraft-marker {
     background: transparent !important;
@@ -225,6 +223,8 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    /* --rot is the aircraft track, set from script.js */
+    transform: rotate(var(--rot, 0deg));
     transition: transform 0.3s ease !important;
     filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.7)) !important;
     pointer-events: auto !important;
@@ -237,12 +237,7 @@ body {
 
 .aircraft-icon-container:hover {
     filter: drop-shadow(3px 3px 6px rgba(0,0,0,0.9)) !important;
-    transform: scale(1.15) !important;
-}
-
-.aircraft-marker.selected .aircraft-icon-container {
-    transform: scale(1.3) !important;
-    filter: drop-shadow(4px 4px 8px rgba(255,68,68,0.8)) !important;
+    transform: rotate(var(--rot, 0deg)) scale(1.15);
 }
 
 /* Leaflet marker overrides */
