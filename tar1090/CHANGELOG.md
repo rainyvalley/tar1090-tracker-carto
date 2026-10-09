@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-09
+
+Fix add-on start-up after 1.2.0 (Supervisor API forbidden)
+
 ### Fixed
 - Add-on failed to start after updating to 1.2.0 ("Unable to access the API,
   forbidden" in a restart loop): options are now read from
