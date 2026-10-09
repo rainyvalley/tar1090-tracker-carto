@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The map no longer shows frozen aircraft as live when tar1090 stops answering:
+  the API serves no aircraft once data is stale, `/api/health` reports
+  `degraded`, and the header says "tar1090 unreachable"
+- `auto_center` now works, and `show_history` sets whether trails are on at start
+- Aircraft on the ground are coloured as low altitude and shown as "Ground";
+  zero values (heading north, stationary, lat/lon 0) are no longer "N/A"
+- Icon colour and size follow altitude and type changes; trails use the
+  aircraft's colour; hovering no longer resets the heading
+- Markers are removed when an aircraft loses its position
+- Malformed tar1090 data no longer causes HTTP 500s or stops the map updating
+- `tar1090_host` values with a scheme or port (`http://host`, `host:8080`) work
+- `/api/history` (as documented) now exists, as an alias of `/api/aircraft/history`
+- Standalone `simple-start.sh` works from a checkout and serves the UI
+- Release script and release workflow fixes
+
+### Changed
+- Base image moved from Alpine 3.18 (end of life) to 3.22
+- Served by Waitress instead of Flask's development server; quieter logs
+- Supervisor watchdog on `/ping`
+- Bounded memory: aircraft.json responses over 10 MB are rejected
+
 ## [1.1.0] - 2026-10-08
 
 ### Changed
