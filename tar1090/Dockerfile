@@ -37,11 +37,11 @@ LABEL \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version=${BUILD_VERSION} \
-    maintainer="Your Name <your.email@example.com>" \
+    maintainer="rainyvalley <68121220+rainyvalley@users.noreply.github.com>" \
     org.opencontainers.image.title="${BUILD_NAME}" \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.vendor="Home Assistant Community Add-ons" \
-    org.opencontainers.image.authors="Your Name <your.email@example.com>" \
+    org.opencontainers.image.vendor="rainyvalley" \
+    org.opencontainers.image.authors="rainyvalley <68121220+rainyvalley@users.noreply.github.com>" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.url="https://addons.community" \
     org.opencontainers.image.source="https://github.com/your-repo/tar1090-addon" \

@@ -15,6 +15,12 @@ init: false
 build: true
 ingress: true
 ingress_port: 5000
+# Optional direct access (REST sensors, plain iframe). Disabled until a host
+# port is set under the add-on's Network settings.
+ports:
+  5000/tcp: null
+ports_description:
+  5000/tcp: "Direct web/API access (optional, no authentication)"
 watchdog: "http://[HOST]:[PORT:5000]/ping"
 panel_icon: mdi:airplane
 icon: mdi:airplane

@@ -49,7 +49,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
 
 > **Running it as a local add-on instead?** Drop the `tar1090/` folder into `/addons/tar1090-carto/` on your HA host, then **Settings → Add-ons → Add-on Store → ⋮ → Check for updates**. It will appear under **Local add-ons**. After any edit to files under `/addons`, use **Rebuild** (not just Restart).
 
-The add-on is reached only through Home Assistant ingress (the sidebar panel); it does not publish a port on the host.
+The add-on is reached through Home Assistant ingress (the sidebar panel). Direct access is optional: set a host port for `5000/tcp` under the add-on's **Network** settings (e.g. `8099`). That port has **no authentication**, so leave it blank unless you need it (REST sensors, a plain iframe) and never forward it to the internet.
 
 ### Method 2: Standalone Installation
 
@@ -83,7 +83,7 @@ Once running (either method), integrate it into your HA dashboard.
 1. **Edit your dashboard**
 2. **Add Card → Webpage Card**
 3. **Settings:**
-   - **URL:** `http://<standalone-host>:8099` (standalone) or the add-on's ingress URL
+   - **URL:** `http://<host>:8099` (direct port or standalone)
    - **Title:** `Aircraft Tracker`
    - **Aspect Ratio:** `16:9` (recommended)
 
@@ -91,20 +91,20 @@ Once running (either method), integrate it into your HA dashboard.
 1. **Settings → Dashboards → Add Dashboard**
 2. **Create new dashboard:**
    - **Type:** Panel (iframe)
-   - **URL:** `http://<standalone-host>:8099` (standalone install)
+   - **URL:** `http://<host>:8099` (direct port or standalone)
    - **Title:** `Aircraft Tracker`
    - **Icon:** `mdi:airplane`
 3. This creates a dedicated full-screen aircraft tracking tab
 
 ### Option 3: Native Map Card Integration
 
-The Webpage Card (Option 1) is the best experience. If you'd rather have aircraft as Home Assistant entities on the built-in map card, add REST sensors and template device trackers to your `configuration.yaml`. This needs a standalone install (Method 2), because the add-on is only reachable through ingress:
+The Webpage Card (Option 1) is the best experience. If you'd rather have aircraft as Home Assistant entities on the built-in map card, add REST sensors and template device trackers to your `configuration.yaml`. This needs the add-on's optional direct port (see above) or a standalone install (Method 2), because ingress URLs require a Home Assistant login:
 
 ```yaml
 # Aircraft data sensor
 sensor:
   - platform: rest
-    resource: http://<standalone-host>:8099/api/aircraft
+    resource: http://<host>:8099/api/aircraft
     name: aircraft_data
     json_attributes:
       - aircraft
@@ -175,7 +175,7 @@ carto_api_key: ""              # Optional Carto basemaps key (recommended, see b
 The tracker provides several REST API endpoints:
 
 - `/api/aircraft` — Current aircraft data. `"stale": true` (and no aircraft) when tar1090 hasn't answered for a while
-- `/api/aircraft/history` (alias `/api/history`) — The last 100 aircraft.json snapshots, if `show_history` is on. `?limit=N` returns only the newest N
+- `/api/aircraft/history` (alias `/api/history`) — The last 12 aircraft.json snapshots, if `show_history` is on. `?limit=N` returns only the newest N
 - `/api/config` — Current configuration (includes `carto_api_key`, which the browser needs)
 - `/api/health` — Service health: `"status": "healthy"`, or `"degraded"` when tar1090 data is stale
 - `/api/stats` — Aircraft statistics
@@ -209,7 +209,7 @@ This fork defaults to Carto specifically because OpenStreetMap's public tiles re
 
 ### Dashboard integration issues
 - For ingress mode, use the add-on's internal URL
-- For standalone, use `http://<standalone-host>:8099`
+- For the direct port or standalone, use `http://<host>:8099`
 - Ensure the HTTP/HTTPS protocol matches your HA setup
 
 ## Changelog
