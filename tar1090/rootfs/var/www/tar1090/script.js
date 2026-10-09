@@ -64,53 +64,132 @@ class AircraftTracker {
 
         // Available base map providers. Carto is used by default because
         // OpenStreetMap's public tile servers reject (HTTP 403) traffic from
-        // self-hosted apps under their tile usage policy. Carto's raster tiles
-        // now require a free API key (carto.com/basemaps/apikey) or they render
-        // an "API KEY REQUIRED" watermark; supply it via the add-on config.
-        const cartoAttr = '© OpenStreetMap contributors © CARTO';
-        const cartoKey = this.config.carto_api_key
-            ? '?key=' + encodeURIComponent(this.config.carto_api_key) : '';
-        this.baseLayers = {
-            carto_light: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png' + cartoKey, {
-                maxZoom: 20,
-                subdomains: 'abcd',
-                attribution: cartoAttr
-            }),
-            carto_dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' + cartoKey, {
-                maxZoom: 20,
-                subdomains: 'abcd',
-                attribution: cartoAttr
-            }),
-            carto_voyager: L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png' + cartoKey, {
-                maxZoom: 20,
-                subdomains: 'abcd',
-                attribution: cartoAttr
-            }),
-            esri_satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                maxZoom: 19,
-                attribution: 'Tiles © Esri'
-            })
+        // self-hosted apps under their tile usage policy.
+        //
+        // Carto layers are drawn from Carto's vector GL styles through
+        // MapLibre (bridged into Leaflet by maplibre-gl-leaflet). Since
+        // 2026-09-25 Carto's raster PNG tiles render "API KEY REQUIRED"
+        // without a key, while the vector styles still load keyless. An
+        // optional carto_api_key is appended to every Carto request so the
+        // map keeps working if Carto extends the key requirement to vector.
+        // Browsers without WebGL fall back to Carto raster (only usable with
+        // a key) or, failing that, to Esri satellite.
+        const cartoAttr = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors '
+            + '&copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>';
+        const cartoKey = String(this.config.carto_api_key || '').trim();
+        const webgl = this.supportsWebGL();
+        if (!webgl) {
+            console.warn('WebGL unavailable: Carto vector maps disabled'
+                + (cartoKey ? ', using Carto raster tiles' : ' (set carto_api_key for Carto raster tiles)'));
+        }
+
+        const withCartoKey = (url) => {
+            if (!cartoKey) return url;
+            try {
+                const u = new URL(url);
+                if (!/(^|\.)cartocdn\.com$/.test(u.hostname)) return url;
+                u.searchParams.set('key', cartoKey);
+                return u.toString();
+            } catch (e) {
+                return url;
+            }
         };
 
-        const defaultProvider = this.baseLayers[this.config.map_provider]
-            ? this.config.map_provider : 'carto_dark';
-        this.setMapProvider(defaultProvider);
+        const cartoLayer = (glStyle, rasterPath) => {
+            if (webgl) {
+                return L.maplibreGL({
+                    style: withCartoKey('https://basemaps.cartocdn.com/gl/' + glStyle + '/style.json'),
+                    attribution: cartoAttr,
+                    transformRequest: (url) => ({ url: withCartoKey(url) })
+                });
+            }
+            if (cartoKey) {
+                return L.tileLayer('https://{s}.basemaps.cartocdn.com/' + rasterPath + '/{z}/{x}/{y}{r}.png?key='
+                    + encodeURIComponent(cartoKey), {
+                    maxZoom: 20,
+                    subdomains: 'abcd',
+                    attribution: cartoAttr
+                });
+            }
+            return null;
+        };
 
+        const layers = {
+            carto_light: cartoLayer('positron-gl-style', 'light_all'),
+            carto_dark: cartoLayer('dark-matter-gl-style', 'dark_all'),
+            carto_voyager: cartoLayer('voyager-gl-style', 'rastertiles/voyager'),
+            esri_satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Tiles &copy; Esri'
+            })
+        };
+        this.baseLayers = {};
+        Object.keys(layers).forEach((id) => {
+            if (layers[id]) this.baseLayers[id] = layers[id];
+        });
+        this.fallbackProvider = this.baseLayers.carto_dark ? 'carto_dark' : 'esri_satellite';
+
+        // Hide selector entries for providers this browser can't show
         const selector = document.getElementById('map-layer');
-        if (selector) selector.value = defaultProvider;
+        if (selector) {
+            Array.from(selector.options).forEach((opt) => {
+                if (!this.baseLayers[opt.value]) opt.remove();
+            });
+        }
 
-        console.log('Map initialized with provider:', defaultProvider);
+        const provider = this.setMapProvider(this.config.map_provider);
+        console.log('Map initialized with provider:', provider);
+    }
+
+    supportsWebGL() {
+        try {
+            if (typeof maplibregl === 'undefined' || typeof L.maplibreGL !== 'function') return false;
+            const canvas = document.createElement('canvas');
+            return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+        } catch (e) {
+            return false;
+        }
     }
 
     setMapProvider(id) {
-        const next = this.baseLayers[id] || this.baseLayers['carto_dark'];
+        if (!this.baseLayers[id]) id = this.fallbackProvider;
+        const next = this.baseLayers[id];
         if (this.currentBaseLayer && this.currentBaseLayer !== next) {
             this.map.removeLayer(this.currentBaseLayer);
         }
-        if (!this.map.hasLayer(next)) {
-            next.addTo(this.map);
+        try {
+            if (!this.map.hasLayer(next)) {
+                next.addTo(this.map);
+            }
+        } catch (error) {
+            // MapLibre throws if the WebGL context can't be created
+            console.error('Failed to show map provider ' + id + ':', error);
+            if (this.map.hasLayer(next)) this.map.removeLayer(next);
+            if (id !== 'esri_satellite') return this.setMapProvider('esri_satellite');
         }
+        if (typeof next.getMaplibreMap === 'function') this.watchVectorLayer(id, next);
         this.currentBaseLayer = next;
+
+        const selector = document.getElementById('map-layer');
+        if (selector) selector.value = id;
+        return id;
+    }
+
+    watchVectorLayer(id, layer) {
+        // If Carto starts rejecting the style (e.g. a key becomes required
+        // for vector too), say so in the console instead of failing silently.
+        const glMap = layer.getMaplibreMap();
+        if (!glMap || glMap._tar1090Watched) return;
+        glMap._tar1090Watched = true;
+        glMap.on('error', (e) => {
+            const status = e && e.error && e.error.status;
+            console.error('Map provider ' + id + ' error' + (status ? ' (HTTP ' + status + ')' : '') + ':',
+                e && e.error ? e.error.message || e.error : e);
+            if ((status === 401 || status === 403) && this.currentBaseLayer === layer) {
+                console.warn('Carto rejected the request; check carto_api_key. Switching to satellite.');
+                this.setMapProvider('esri_satellite');
+            }
+        });
     }
 
     setupEventListeners() {
@@ -241,7 +320,7 @@ class AircraftTracker {
             if (aircraft.track !== undefined) {
                 const iconContainer = marker.getElement()?.querySelector('.aircraft-icon-container');
                 if (iconContainer) {
-                    iconContainer.style.transform = `rotate(${aircraft.track}deg)`;
+                    iconContainer.style.transform = `rotate(${Number(aircraft.track) || 0}deg)`;
                 }
             }
             
@@ -255,7 +334,7 @@ class AircraftTracker {
         } else {
             // Create aircraft icon with proper rotation and size based on aircraft type
             const iconSize = this.getAircraftIconSize(aircraft);
-            const rotation = aircraft.track || 0;
+            const rotation = Number(aircraft.track) || 0;
             const color = this.getAircraftColor(aircraft);
             
             const aircraftIcon = L.divIcon({
@@ -276,31 +355,19 @@ class AircraftTracker {
             
             // Add click handler for FlightAware 
             marker.on('click', (e) => {
-                const registration = aircraft.r || aircraft.reg;
-                const callsign = aircraft.flight ? aircraft.flight.trim() : null;
-                
                 // Right-click or Ctrl+click to open FlightAware directly
                 if (e.originalEvent.ctrlKey || e.originalEvent.button === 2) {
                     e.originalEvent.preventDefault();
-                    if (registration) {
-                        window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
-                    } else if (callsign) {
-                        window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
-                    }
+                    const url = this.flightAwareUrl(aircraft);
+                    if (url) window.open(url, '_blank', 'noopener,noreferrer');
                 }
             });
             
             // Add context menu (right-click) handler
             marker.on('contextmenu', (e) => {
                 e.originalEvent.preventDefault();
-                const registration = aircraft.r || aircraft.reg;
-                const callsign = aircraft.flight ? aircraft.flight.trim() : null;
-                
-                if (registration) {
-                    window.open(`https://www.flightaware.com/live/flight/${registration}`, '_blank', 'noopener,noreferrer');
-                } else if (callsign) {
-                    window.open(`https://www.flightaware.com/live/flight/${callsign}`, '_blank', 'noopener,noreferrer');
-                }
+                const url = this.flightAwareUrl(aircraft);
+                if (url) window.open(url, '_blank', 'noopener,noreferrer');
             });
             
             marker.addTo(this.map);
@@ -406,7 +473,23 @@ class AircraftTracker {
         return 24;
     }
 
+    // Aircraft fields come from over-the-air ADS-B data and tar1090's
+    // database, so escape them before building HTML.
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        })[c]);
+    }
+
+    flightAwareUrl(aircraft) {
+        const registration = aircraft.r || aircraft.reg;
+        const callsign = aircraft.flight ? aircraft.flight.trim() : null;
+        const ident = registration || callsign;
+        return ident ? 'https://www.flightaware.com/live/flight/' + encodeURIComponent(ident) : null;
+    }
+
     createPopupContent(aircraft) {
+        const esc = (v) => this.escapeHtml(v);
         const callsign = aircraft.flight ? aircraft.flight.trim() : 'N/A';
         const altitude = aircraft.alt_baro || aircraft.alt_geom || 'N/A';
         const speed = aircraft.gs || 'N/A';
@@ -415,23 +498,21 @@ class AircraftTracker {
         const registration = aircraft.r || aircraft.reg || 'N/A';
         
         // Create FlightAware link if we have registration or callsign
-        let fr24Link = '';
-        if (registration !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${registration}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
-        } else if (callsign !== 'N/A') {
-            fr24Link = `<div style="margin-top: 8px;"><a href="https://www.flightaware.com/live/flight/${callsign}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`;
-        }
+        const faUrl = this.flightAwareUrl(aircraft);
+        const fr24Link = faUrl
+            ? `<div style="margin-top: 8px;"><a href="${esc(faUrl)}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`
+            : '';
         
         return `
-            <div class="popup-callsign">${callsign}</div>
+            <div class="popup-callsign">${esc(callsign)}</div>
             <div class="popup-details">
-                <div><strong>Hex:</strong> ${aircraft.hex}</div>
-                ${registration !== 'N/A' ? `<div><strong>Registration:</strong> ${registration}</div>` : ''}
-                <div><strong>Altitude:</strong> ${altitude} ft</div>
-                <div><strong>Speed:</strong> ${speed} kts</div>
-                <div><strong>Track:</strong> ${track}°</div>
-                <div><strong>Squawk:</strong> ${squawk}</div>
-                ${aircraft.category ? `<div><strong>Category:</strong> ${aircraft.category}</div>` : ''}
+                <div><strong>Hex:</strong> ${esc(aircraft.hex)}</div>
+                ${registration !== 'N/A' ? `<div><strong>Registration:</strong> ${esc(registration)}</div>` : ''}
+                <div><strong>Altitude:</strong> ${esc(altitude)} ft</div>
+                <div><strong>Speed:</strong> ${esc(speed)} kts</div>
+                <div><strong>Track:</strong> ${esc(track)}°</div>
+                <div><strong>Squawk:</strong> ${esc(squawk)}</div>
+                ${aircraft.category ? `<div><strong>Category:</strong> ${esc(aircraft.category)}</div>` : ''}
                 ${fr24Link}
             </div>
         `;
@@ -457,10 +538,10 @@ class AircraftTracker {
             const speed = ac.gs || 'N/A';
             
             item.innerHTML = `
-                <div class="aircraft-callsign">${callsign}</div>
+                <div class="aircraft-callsign">${this.escapeHtml(callsign)}</div>
                 <div class="aircraft-details">
-                    <span class="aircraft-altitude">${altitude} ft</span> | 
-                    <span class="aircraft-speed">${speed} kts</span>
+                    <span class="aircraft-altitude">${this.escapeHtml(altitude)} ft</span> | 
+                    <span class="aircraft-speed">${this.escapeHtml(speed)} kts</span>
                 </div>
             `;
             
