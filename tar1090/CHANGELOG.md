@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Add-on failed to start after updating to 1.2.0 ("Unable to access the API,
+  forbidden" in a restart loop): options are now read from
+  `/data/options.json` instead of through the Supervisor API
+
 ## [1.2.0] - 2026-10-09
 
 Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and release fixes
@@ -327,5 +332,6 @@ Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and r
 - Documentation: [README.md](README.md)
 - Discussions: [GitHub Discussions](https://github.com/rainyvalley/tar1090-tracker-carto/discussions)
 
-[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/7b11673...v1.2.0

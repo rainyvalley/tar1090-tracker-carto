@@ -1,16 +1,22 @@
 #!/usr/bin/env bashio
 
-# Read configuration
-TAR1090_HOST=$(bashio::config 'tar1090_host')
-TAR1090_PORT=$(bashio::config 'tar1090_port')
-UPDATE_INTERVAL=$(bashio::config 'update_interval')
-SHOW_HISTORY=$(bashio::config 'show_history')
-MAP_CENTER_LAT=$(bashio::config 'map_center_lat')
-MAP_CENTER_LON=$(bashio::config 'map_center_lon')
-MAP_ZOOM=$(bashio::config 'map_zoom')
-AUTO_CENTER=$(bashio::config 'auto_center')
-MAP_PROVIDER=$(bashio::config 'map_provider')
-CARTO_API_KEY=$(bashio::config 'carto_api_key')
+# Read configuration straight from the options file the Supervisor writes.
+# bashio::config goes through the Supervisor API, which newer bashio calls on
+# a path this add-on is not granted ("Unable to access the API, forbidden").
+CONFIG_PATH=/data/options.json
+[ -r "$CONFIG_PATH" ] || bashio::exit.nok "Cannot read $CONFIG_PATH"
+config() { jq -r --arg k "$1" '.[$k] | select(. != null)' "$CONFIG_PATH"; }
+
+TAR1090_HOST=$(config 'tar1090_host')
+TAR1090_PORT=$(config 'tar1090_port')
+UPDATE_INTERVAL=$(config 'update_interval')
+SHOW_HISTORY=$(config 'show_history')
+MAP_CENTER_LAT=$(config 'map_center_lat')
+MAP_CENTER_LON=$(config 'map_center_lon')
+MAP_ZOOM=$(config 'map_zoom')
+AUTO_CENTER=$(config 'auto_center')
+MAP_PROVIDER=$(config 'map_provider')
+CARTO_API_KEY=$(config 'carto_api_key')
 
 bashio::log.info "Starting Tar1090 Aircraft Tracker with Ingress..."
 bashio::log.info "Configuration debug:"
