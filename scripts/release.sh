@@ -79,11 +79,7 @@ echo "📦 Committing changes..."
 git add -- "${FILES[@]}"
 git commit -m "🔖 Release version $VERSION
 
-${SUMMARY:-Version $VERSION release}
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+${SUMMARY:-Version $VERSION release}"
 
 echo "🏷️  Creating git tag..."
 git tag -a "v$VERSION" -m "Release version $VERSION"
