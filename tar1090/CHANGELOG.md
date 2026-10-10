@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-09
+
+Faster start-up and a lighter dashboard poll
+
 ### Changed
 - **Faster add-on start-up.** `run.sh` reads every option in a single `jq`
   pass instead of spawning one `jq` process per key, and no longer repeats
