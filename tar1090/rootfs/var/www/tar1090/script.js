@@ -270,14 +270,14 @@ class AircraftTracker {
         const interval = Math.max(1, Number(this.config.update_interval) || 1) * 1000;
         const updateData = async () => {
             try {
-                const [aircraftData, statsData] = await Promise.all([
-                    this.fetchAPI('aircraft'),
-                    this.fetchAPI('stats')
-                ]);
+                const aircraftData = await this.fetchAPI('aircraft');
 
                 this.updateAircraft(aircraftData);
-                this.updateStats(statsData);
-                this.updateConnectionStatus(aircraftData.stale || statsData.stale ? 'stale' : 'connected');
+                // total_aircraft and last_update both come straight from the
+                // aircraft response, so a second /stats round trip per poll
+                // is redundant (the /stats endpoint itself stays available).
+                this.updateStats(aircraftData);
+                this.updateConnectionStatus(aircraftData.stale ? 'stale' : 'connected');
             } catch (error) {
                 console.error('Failed to fetch data:', error);
                 this.updateConnectionStatus('disconnected');
@@ -654,13 +654,13 @@ class AircraftTracker {
         });
     }
 
-    updateStats(stats) {
-        document.getElementById('aircraft-count').textContent = 
-            `${stats.total_aircraft} aircraft`;
-        
-        const lastUpdate = stats.last_update ? 
-            new Date(stats.last_update * 1000).toLocaleTimeString() : '--';
-        document.getElementById('last-update').textContent = 
+    updateStats(data) {
+        document.getElementById('aircraft-count').textContent =
+            `${(data.aircraft || []).length} aircraft`;
+
+        const lastUpdate = data.now ?
+            new Date(data.now * 1000).toLocaleTimeString() : '--';
+        document.getElementById('last-update').textContent =
             `Last update: ${lastUpdate}`;
     }
 
