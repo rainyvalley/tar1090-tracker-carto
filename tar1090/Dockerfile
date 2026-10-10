@@ -43,9 +43,9 @@ LABEL \
     org.opencontainers.image.vendor="rainyvalley" \
     org.opencontainers.image.authors="rainyvalley <68121220+rainyvalley@users.noreply.github.com>" \
     org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.url="https://addons.community" \
-    org.opencontainers.image.source="https://github.com/your-repo/tar1090-addon" \
-    org.opencontainers.image.documentation="https://github.com/your-repo/tar1090-addon/blob/main/README.md" \
+    org.opencontainers.image.url="https://github.com/rainyvalley/tar1090-tracker-carto" \
+    org.opencontainers.image.source="https://github.com/rainyvalley/tar1090-tracker-carto" \
+    org.opencontainers.image.documentation="https://github.com/rainyvalley/tar1090-tracker-carto/blob/main/README.md" \
     org.opencontainers.image.created=${BUILD_DATE} \
     org.opencontainers.image.revision=${BUILD_REF} \
     org.opencontainers.image.version=${BUILD_VERSION}
