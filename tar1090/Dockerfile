@@ -1,4 +1,6 @@
 ARG BUILD_FROM
+# BUILD_FROM is a pinned tag from tar1090/build.yaml.
+# hadolint ignore=DL3006
 FROM $BUILD_FROM
 
 # Set shell

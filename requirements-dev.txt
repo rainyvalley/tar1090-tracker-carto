@@ -1,0 +1,6 @@
+# CI test dependencies. The runtime deps mirror tar1090/Dockerfile's apk
+# packages (py3-flask, py3-requests, py3-waitress); pinned so CI is reproducible.
+flask==3.1.3
+pytest==9.1.1
+requests==2.34.2
+waitress==3.0.2

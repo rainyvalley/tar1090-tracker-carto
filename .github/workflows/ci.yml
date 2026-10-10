@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0  # full history: tags for check_version.py
+
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Compile app.py
+        run: python -m py_compile tar1090/rootfs/app/app.py
+
+      - name: Run pytest
+        run: pytest -q tests/
+
+      - name: Check version deliverability
+        run: python .github/scripts/check_version.py
+
+      - name: Lint shell scripts
+        run: |
+          for script in simple-start.sh scripts/release.sh tar1090/rootfs/usr/bin/run.sh; do
+            bash -n "$script"
+            shellcheck -x "$script"
+          done
+
+      - name: Syntax-check the UI script
+        run: node --check tar1090/rootfs/var/www/tar1090/script.js
+
+      - name: Check index.html references
+        run: python .github/scripts/check_html_refs.py
+
+      - name: Verify vendored libraries
+        run: cd tar1090/rootfs/var/www/tar1090/vendor && sha256sum -c SHA256SUMS
+
+      - name: Lint YAML manifests
+        run: yamllint tar1090/config.yaml tar1090/build.yaml repository.json
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: Download hadolint
+        run: |
+          HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
+          curl -fsSL -o /usr/local/bin/hadolint \
+            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          echo "$HADOLINT_SHA256  /usr/local/bin/hadolint" | sha256sum -c -
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Lint Dockerfile
+        run: hadolint tar1090/Dockerfile
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3.12.0
+
+      - name: Build amd64 image
+        # BUILD_FROM, per arch, comes from build.yaml; build amd64 as the CI arch.
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75  # v6.9.0
+        with:
+          context: tar1090
+          build-args: |
+            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.22
+          tags: tar1090-tracker-carto:ci
+          load: true
+          cache-from: type=gha,scope=ci-dockerfile-${{ hashFiles('tar1090/Dockerfile') }}
+          cache-to: type=gha,mode=max,scope=ci-dockerfile-${{ hashFiles('tar1090/Dockerfile') }}
+
+      - name: Smoke test the image through run.sh
+        run: |
+          mkdir -p /tmp/ha-data
+          cat > /tmp/ha-data/options.json <<'JSON'
+          {
+            "tar1090_host": "192.0.2.100",
+            "tar1090_port": 8080,
+            "update_interval": 1,
+            "show_history": true,
+            "map_center_lat": 54.7023,
+            "map_center_lon": -3.2765,
+            "map_zoom": 8,
+            "auto_center": false,
+            "map_provider": "carto_dark",
+            "carto_api_key": ""
+          }
+          JSON
+          docker run -d --name tracker \
+            -v /tmp/ha-data/options.json:/data/options.json:ro \
+            -v "${{ github.workspace }}/.github/scripts/smoke_test.py:/tmp/smoke_test.py:ro" \
+            tar1090-tracker-carto:ci
+          for _ in $(seq 1 30); do
+            if docker exec tracker python3 /tmp/smoke_test.py 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          docker exec tracker python3 /tmp/smoke_test.py
+          docker logs tracker 2>&1 | grep -q 'Starting Tar1090'
+          docker rm -f tracker

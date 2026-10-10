@@ -1,0 +1,11 @@
+# yamllint config for this repo. The add-on manifests use long unquoted
+# container-image lines and JSON-style one-liners; tune rather than disable.
+extends: default
+
+rules:
+  line-length:
+    max: 100
+  document-start: disable
+  # GitHub Actions' `on:` key is a YAML bug turned feature; keys only.
+  truthy:
+    check-keys: false
