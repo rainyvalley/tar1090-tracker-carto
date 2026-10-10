@@ -249,13 +249,6 @@ body {
     transform: rotate(var(--rot, 0deg)) scale(1.15);
 }
 
-/* Leaflet marker overrides */
-.leaflet-marker-icon.aircraft-marker {
-    background: transparent !important;
-    border: none !important;
-    border-radius: 0 !important;
-}
-
 /* Scrollbar styling for aircraft list */
 #aircraft-list::-webkit-scrollbar {
     width: 6px;
