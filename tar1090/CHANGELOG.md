@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Faster add-on start-up.** `run.sh` reads every option in a single `jq`
+  pass instead of spawning one `jq` process per key, and no longer repeats
+  the configuration dump that the Python app already logs.
+- **Half the dashboard requests per poll.** The UI takes aircraft count and
+  last-update time from the aircraft feed it already fetches, instead of
+  asking `/stats` for them as well. The `/stats` endpoint stays available.
+
+### Fixed
+- Container image labels (OCI source, documentation and url) pointed at the
+  upstream template placeholders instead of this repository.
+
+### Removed
+- Duplicate `.leaflet-marker-icon.aircraft-marker` CSS rule that only
+  restated `.aircraft-marker`.
+
 ## [1.3.0] - 2026-10-09
 
 Trails toggle showing each aircraft's full flight path
