@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Lighter polling.** The add-on keeps one connection open to tar1090
+  instead of reconnecting on every poll, and the map redraws an aircraft's
+  trail or popup only when it actually changed.
+
 ## [1.3.1] - 2026-10-09
 
 Faster start-up and a lighter dashboard poll
