@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of reconnecting on every poll, and the map redraws an aircraft's
   trail or popup only when it actually changed.
 
+### Removed
+- **Unused `aircraft-icon.svg`.** Markers are drawn from an inline SVG; the
+  standalone file was never referenced.
+
 ## [1.3.1] - 2026-10-09
 
 Faster start-up and a lighter dashboard poll
