@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-13
+
+Fixes: empty add-on options no longer shift later options, manual releases use the requested tag, recorded trails reload after a stale spell. Lighter polling.
+
 ### Changed
 - **Lighter polling.** The add-on keeps one connection open to tar1090
   instead of reconnecting on every poll, and the map redraws an aircraft's
