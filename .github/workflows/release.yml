@@ -19,6 +19,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           fetch-depth: 0
+          # A manual run starts on a branch; release from the requested tag.
+          ref: ${{ inputs.tag || github.ref }}
 
       - name: Get version from tag
         id: get_version
@@ -53,9 +55,9 @@ jobs:
       - name: Create Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
           VERSION: ${{ steps.get_version.outputs.VERSION }}
         run: >-
-          gh release create "$TAG"
+          gh release create "$TAG" --verify-tag
           --title "Release $VERSION"
           --notes-file release_notes.md

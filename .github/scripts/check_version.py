@@ -52,7 +52,12 @@ def newest_tag():
 
 
 def head_touched_config():
-    return CONFIG in git('show', '--name-only', '--pretty=format:', 'HEAD').splitlines()
+    # Diff against the first parent: `git show` lists nothing for a merge
+    # commit (combined diff), and a pull request is checked out as one.
+    parents = git('rev-list', '--parents', '-n', '1', 'HEAD').split()[1:]
+    if not parents:
+        return CONFIG in git('show', '--name-only', '--pretty=format:', 'HEAD').splitlines()
+    return CONFIG in git('diff', '--name-only', parents[0], 'HEAD').splitlines()
 
 
 def fail(*messages):
@@ -91,8 +96,8 @@ def push_mode():
              f'version (./scripts/release.sh) before pushing.')
 
     newest = newest_tag()
+    head = tuple(map(int, version.split('.')))
     if bumped_in_head and newest is not None:
-        head = tuple(map(int, version.split('.')))
         if head <= tuple(map(int, newest.split('.'))):
             fail(f'{CONFIG} is changed in this commit but {version} is not newer than '
                  f'the newest tag {newest}; a bump must raise the version so HA '
@@ -101,7 +106,7 @@ def push_mode():
     for changelog in CHANGELOGS:
         if f'## [{version}]' not in git('show', f'HEAD:{changelog}'):
             fail(f'{changelog} has no "## [{version}]" section for the shipped version')
-    if newest and version <= newest and not bumped_in_head:
+    if newest and head <= tuple(map(int, newest.split('.'))) and not bumped_in_head:
         print(f'note: {CONFIG} ({version}) equals/ships below newest tag {newest}; '
               f'{ROOTFS} is unchanged since the bump, so this is deliverable')
     print(f'config version {version} is deliverable (rootfs <= config bump, '
