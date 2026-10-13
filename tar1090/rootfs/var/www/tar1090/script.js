@@ -12,6 +12,7 @@ class AircraftTracker {
         this.lastAircraft = [];
         this.userMovedMap = false;
         this.autoFitting = false;
+        this.trailsLoaded = false;  // recorded paths fetched since the last stale spell
 
         this.init();
     }
@@ -278,6 +279,14 @@ class AircraftTracker {
                 // is redundant (the /stats endpoint itself stays available).
                 this.updateStats(aircraftData);
                 this.updateConnectionStatus(aircraftData.stale ? 'stale' : 'connected');
+                // Fetch the recorded paths once markers exist to hang them on:
+                // after the first good poll, and again after a stale spell,
+                // which removed every marker and trail.
+                if (aircraftData.stale) {
+                    this.trailsLoaded = false;
+                } else if (this.showHistory && !this.trailsLoaded) {
+                    this.loadTrails();
+                }
             } catch (error) {
                 console.error('Failed to fetch data:', error);
                 this.updateConnectionStatus('disconnected');
@@ -288,17 +297,18 @@ class AircraftTracker {
         };
 
         await updateData();
-        if (this.showHistory) this.loadTrails();
     }
 
     // Draw each aircraft's path so far, as recorded by the add-on, so trails
     // show where aircraft have been rather than only since the page opened.
     async loadTrails() {
+        this.trailsLoaded = true;
         let data;
         try {
             data = await this.fetchAPI('trails');
         } catch (error) {
             console.warn('Could not load trails:', error);
+            this.trailsLoaded = false;  // try again on the next poll
             return;
         }
         if (!this.showHistory || !data || typeof data.trails !== 'object' || data.trails === null) return;
