@@ -446,11 +446,18 @@ class AircraftTracker {
                 marker.setIcon(this.createAircraftIcon(iconSize, color));
                 marker.iconKey = iconKey;
             }
-            marker.setPopupContent(this.createPopupContent(aircraft));
+            // An open popup is rebuilt on every setPopupContent; skip it when
+            // nothing shown in it changed
+            const popupHtml = this.createPopupContent(aircraft);
+            if (marker.popupHtml !== popupHtml) {
+                marker.setPopupContent(popupHtml);
+                marker.popupHtml = popupHtml;
+            }
         } else {
             marker = L.marker(position, { icon: this.createAircraftIcon(iconSize, color) });
             marker.iconKey = iconKey;
-            marker.bindPopup(this.createPopupContent(aircraft));
+            marker.popupHtml = this.createPopupContent(aircraft);
+            marker.bindPopup(marker.popupHtml);
 
             // Ctrl+click opens FlightAware directly
             marker.on('click', (e) => {
