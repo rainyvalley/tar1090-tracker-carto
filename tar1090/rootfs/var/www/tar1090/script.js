@@ -451,7 +451,11 @@ class AircraftTracker {
         const iconKey = iconSize + '|' + color;
 
         if (marker) {
-            marker.setLatLng(position);
+            // Skip the redraw when the aircraft has not moved
+            const current = marker.getLatLng();
+            if (current.lat !== position[0] || current.lng !== position[1]) {
+                marker.setLatLng(position);
+            }
             // Colour follows altitude and size may change once the type is known
             if (marker.iconKey !== iconKey) {
                 marker.setIcon(this.createAircraftIcon(iconSize, color));
