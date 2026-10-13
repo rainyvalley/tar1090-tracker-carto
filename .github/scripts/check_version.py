@@ -52,7 +52,12 @@ def newest_tag():
 
 
 def head_touched_config():
-    return CONFIG in git('show', '--name-only', '--pretty=format:', 'HEAD').splitlines()
+    # Diff against the first parent: `git show` lists nothing for a merge
+    # commit (combined diff), and a pull request is checked out as one.
+    parents = git('rev-list', '--parents', '-n', '1', 'HEAD').split()[1:]
+    if not parents:
+        return CONFIG in git('show', '--name-only', '--pretty=format:', 'HEAD').splitlines()
+    return CONFIG in git('diff', '--name-only', parents[0], 'HEAD').splitlines()
 
 
 def fail(*messages):
