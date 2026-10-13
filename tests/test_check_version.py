@@ -67,3 +67,32 @@ def test_head_touched_config_merge_commit(repo):
     run('commit', '-q', '-am', 'base moves on')
     run('merge', '-q', '--no-ff', 'pr', '-m', 'merge')
     assert check_version.head_touched_config() is True
+
+
+def ship(version):
+    """Commit a bump to version with changelog sections, tagged v<version>."""
+    write(check_version.CONFIG, f'version: "{version}"\n')
+    for changelog in check_version.CHANGELOGS:
+        write(changelog, f'# Changelog\n\n## [{version}]\n')
+    run('add', '.')
+    run('commit', '-q', '-m', f'release {version}')
+    run('tag', f'v{version}')
+
+
+def test_note_compares_versions_numerically(repo, capsys):
+    """1.10.0 is newer than 1.9.0, not "below" it as strings would say."""
+    ship('1.9.0')
+    ship('1.10.0')
+    run('tag', '-d', 'v1.10.0')  # newest tag is now v1.9.0
+    write('other.txt', 'b\n')
+    run('commit', '-q', '-am', 'docs only')
+    assert check_version.push_mode() == 0
+    assert 'ships below newest tag' not in capsys.readouterr().out
+
+
+def test_note_when_config_equals_newest_tag(repo, capsys):
+    ship('1.9.0')
+    write('other.txt', 'b\n')
+    run('commit', '-q', '-am', 'docs only')
+    assert check_version.push_mode() == 0
+    assert 'equals/ships below newest tag 1.9.0' in capsys.readouterr().out

@@ -96,8 +96,8 @@ def push_mode():
              f'version (./scripts/release.sh) before pushing.')
 
     newest = newest_tag()
+    head = tuple(map(int, version.split('.')))
     if bumped_in_head and newest is not None:
-        head = tuple(map(int, version.split('.')))
         if head <= tuple(map(int, newest.split('.'))):
             fail(f'{CONFIG} is changed in this commit but {version} is not newer than '
                  f'the newest tag {newest}; a bump must raise the version so HA '
@@ -106,7 +106,7 @@ def push_mode():
     for changelog in CHANGELOGS:
         if f'## [{version}]' not in git('show', f'HEAD:{changelog}'):
             fail(f'{changelog} has no "## [{version}]" section for the shipped version')
-    if newest and version <= newest and not bumped_in_head:
+    if newest and head <= tuple(map(int, newest.split('.'))) and not bumped_in_head:
         print(f'note: {CONFIG} ({version}) equals/ships below newest tag {newest}; '
               f'{ROOTFS} is unchanged since the bump, so this is deliverable')
     print(f'config version {version} is deliverable (rootfs <= config bump, '
