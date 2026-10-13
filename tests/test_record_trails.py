@@ -1,7 +1,5 @@
 """Tests for app.record_trails: dedupe, spacing, trimming, expiry, rejects."""
 
-import time
-
 import pytest
 
 import app
