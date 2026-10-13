@@ -9,12 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.3.2] - 2026-10-13
 
-Fixes: empty add-on options no longer shift later options, manual releases use the requested tag, recorded trails reload after a stale spell. Lighter polling.
+Lighter polling, plus fixes for empty add-on options and recorded trails after a stale spell
 
 ### Changed
 - **Lighter polling.** The add-on keeps one connection open to tar1090
   instead of reconnecting on every poll, and the map redraws an aircraft's
   trail or popup only when it actually changed.
+
+### Fixed
+- **Empty add-on options.** An option left empty (for example a cleared
+  `tar1090_host`) no longer shifts the options after it in `run.sh`.
+- **Recorded trails reload.** Trails now load after the first good poll
+  and again after a stale spell, instead of staying empty.
+- Manual releases now use the requested tag.
 
 ### Removed
 - **Unused `aircraft-icon.svg`.** Markers are drawn from an inline SVG; the
@@ -311,7 +318,9 @@ Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and r
 - Documentation: [README.md](README.md)
 - Discussions: [GitHub Discussions](https://github.com/rainyvalley/tar1090-tracker-carto/discussions)
 
-[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/7b11673...v1.2.0

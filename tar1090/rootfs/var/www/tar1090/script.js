@@ -10,6 +10,7 @@ class AircraftTracker {
         this.showHistory = false;
         this.maxTrailPoints = 720;  // matches the add-on's TRAIL_MAX_POINTS
         this.lastAircraft = [];
+        this.listRows = new Map(); // hex -> { item, html } for the aircraft list
         this.userMovedMap = false;
         this.autoFitting = false;
         this.trailsLoaded = false;  // recorded paths fetched since the last stale spell
@@ -450,7 +451,11 @@ class AircraftTracker {
         const iconKey = iconSize + '|' + color;
 
         if (marker) {
-            marker.setLatLng(position);
+            // Skip the redraw when the aircraft has not moved
+            const current = marker.getLatLng();
+            if (current.lat !== position[0] || current.lng !== position[1]) {
+                marker.setLatLng(position);
+            }
             // Colour follows altitude and size may change once the type is known
             if (marker.iconKey !== iconKey) {
                 marker.setIcon(this.createAircraftIcon(iconSize, color));
@@ -631,47 +636,72 @@ class AircraftTracker {
         if (list.classList.contains('is-hidden')) return;
 
         const listContainer = document.getElementById('aircraft-items');
-        listContainer.innerHTML = '';
 
         // Sort by callsign, then by hex
         const label = (ac) => ac.flight || ac.hex;
         const sorted = aircraft.slice().sort((a, b) => label(a).localeCompare(label(b)));
 
+        // Rows are keyed by hex and updated in place, so keyboard focus and
+        // in-flight clicks survive a poll. Rows of vanished aircraft go.
+        const seen = new Set();
+        let next = listContainer.firstChild;
         sorted.forEach(ac => {
-            const item = document.createElement('div');
-            item.className = 'aircraft-item';
-            item.tabIndex = 0;
-            item.setAttribute('role', 'button');
+            seen.add(ac.hex);
+            let row = this.listRows.get(ac.hex);
+            if (!row) {
+                const item = document.createElement('div');
+                item.className = 'aircraft-item';
+                item.tabIndex = 0;
+                item.setAttribute('role', 'button');
+
+                // Click (or Enter/Space) to center on aircraft
+                const hex = ac.hex;
+                const focusAircraft = () => {
+                    const marker = this.aircraftMarkers.get(hex);
+                    if (marker) {
+                        this.userMovedMap = true;
+                        this.map.setView(marker.getLatLng(), 12);
+                        marker.openPopup();
+                    }
+                };
+                item.addEventListener('click', focusAircraft);
+                item.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        focusAircraft();
+                    }
+                });
+                row = { item, html: null };
+                this.listRows.set(ac.hex, row);
+            }
 
             const speed = ac.gs !== null ? `${ac.gs} kts` : 'N/A';
-
-            item.innerHTML = `
+            const html = `
                 <div class="aircraft-callsign">${this.escapeHtml(label(ac))}</div>
                 <div class="aircraft-details">
                     <span class="aircraft-altitude">${this.escapeHtml(this.formatAltitude(ac))}</span> | 
                     <span class="aircraft-speed">${this.escapeHtml(speed)}</span>
                 </div>
             `;
+            if (row.html !== html) {
+                row.item.innerHTML = html;
+                row.html = html;
+            }
 
-            // Click (or Enter/Space) to center on aircraft
-            const focusAircraft = () => {
-                const marker = this.aircraftMarkers.get(ac.hex);
-                if (marker) {
-                    this.userMovedMap = true;
-                    this.map.setView(marker.getLatLng(), 12);
-                    marker.openPopup();
-                }
-            };
-            item.addEventListener('click', focusAircraft);
-            item.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    focusAircraft();
-                }
-            });
-
-            listContainer.appendChild(item);
+            // Only move a row that is not already in its place
+            if (row.item === next) {
+                next = next.nextSibling;
+            } else {
+                listContainer.insertBefore(row.item, next);
+            }
         });
+
+        for (const [hex, row] of this.listRows) {
+            if (!seen.has(hex)) {
+                row.item.remove();
+                this.listRows.delete(hex);
+            }
+        }
     }
 
     updateStats(data) {
