@@ -224,3 +224,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes in each relea
 - This fork adds selectable Carto base maps and switches flight links from FlightRadar24 to FlightAware.
 
 Base map tiles are © OpenStreetMap contributors and © CARTO; satellite imagery © Esri. This add-on is distributed under the same **MIT License** as the upstream project; see the original repository for license terms.
+
+## A note on AI assistance
+
+Parts of this project — code, configuration, and documentation — were written with the help of generative AI. Everything in here was reviewed, tested, and corrected by a human before being committed; nothing was accepted on the model's say-so.
