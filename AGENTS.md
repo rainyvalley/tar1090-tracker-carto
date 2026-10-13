@@ -3,7 +3,8 @@
 Home Assistant add-on repository: one add-on (`tar1090/`) that draws a
 [tar1090](https://github.com/wiedehopf/tar1090) ADS-B feed on a Leaflet map
 inside Home Assistant. Fork of `random-robbie/tar1090-tracker` (see README).
-Python/Flask + vanilla JS — no compiled code, no test suite, no push CI.
+Python/Flask + vanilla JS — no compiled code. pytest suite in `tests/`;
+`ci.yml` runs it plus the repo checks on every push and pull request.
 
 ## Structure
 
@@ -18,7 +19,10 @@ tar1090/rootfs/var/www/tar1090/     # index.html, script.js, style.css, vendored
 CHANGELOG.md                        # repo-level changelog (trimmed copy of the add-on one)
 tar1090/CHANGELOG.md                # add-on changelog — full history
 scripts/release.sh                  # the release tool — use it, never hand-bump
+.github/workflows/ci.yml            # push/PR: pytest, version check, shellcheck, yamllint, image smoke test
 .github/workflows/release.yml       # tag-triggered only: publishes the GitHub Release
+.github/scripts/                    # CI helpers: check_version.py, check_html_refs.py, smoke_test.py
+tests/                              # pytest suite (pinned deps: requirements-dev.txt)
 simple-start.sh                     # standalone run outside HA
 ```
 
@@ -70,7 +74,9 @@ git log --oneline -1 -- tar1090/config.yaml   # last bump
 git log --oneline -1 -- tar1090/rootfs        # last add-on change
 ```
 
-There is no push CI in this repo, so nothing catches a missed bump for you.
+`ci.yml` runs `.github/scripts/check_version.py`, which fails a push to `main`
+when `tar1090/rootfs` changed after the last bump; it flags the miss but does
+not fix it.
 
 ## Gotchas
 
