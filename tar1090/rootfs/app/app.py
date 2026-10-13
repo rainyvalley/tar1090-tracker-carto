@@ -156,6 +156,11 @@ TRAIL_MIN_SPACING = 5
 TRAIL_EXPIRE = 300
 trails = {}  # hex -> {"points": [[lat, lon], ...], "last_point": t, "seen": t}
 
+# One keep-alive connection to tar1090 for the poller, instead of a new TCP
+# connection (and socket left in TIME_WAIT) every UPDATE_INTERVAL. Only the
+# poller thread uses it.
+_session = requests.Session()
+
 
 def sanitize_aircraft_data(data):
     """Return data if it looks like tar1090's aircraft.json, else None."""
@@ -196,7 +201,7 @@ def record_trails(aircraft, now):
 def fetch_aircraft_data():
     """Fetch aircraft data from tar1090. Returns (data, error)."""
     try:
-        with requests.get(TAR1090_URL, timeout=5, stream=True) as response:
+        with _session.get(TAR1090_URL, timeout=5, stream=True) as response:
             response.raise_for_status()
             body = bytearray()
             for chunk in response.iter_content(chunk_size=65536):
