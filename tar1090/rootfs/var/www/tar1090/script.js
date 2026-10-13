@@ -456,11 +456,18 @@ class AircraftTracker {
                 marker.setIcon(this.createAircraftIcon(iconSize, color));
                 marker.iconKey = iconKey;
             }
-            marker.setPopupContent(this.createPopupContent(aircraft));
+            // An open popup is rebuilt on every setPopupContent; skip it when
+            // nothing shown in it changed
+            const popupHtml = this.createPopupContent(aircraft);
+            if (marker.popupHtml !== popupHtml) {
+                marker.setPopupContent(popupHtml);
+                marker.popupHtml = popupHtml;
+            }
         } else {
             marker = L.marker(position, { icon: this.createAircraftIcon(iconSize, color) });
             marker.iconKey = iconKey;
-            marker.bindPopup(this.createPopupContent(aircraft));
+            marker.popupHtml = this.createPopupContent(aircraft);
+            marker.bindPopup(marker.popupHtml);
 
             // Ctrl+click opens FlightAware directly
             marker.on('click', (e) => {
@@ -500,15 +507,18 @@ class AircraftTracker {
 
         // Only record actual movement
         const last = points[points.length - 1];
-        if (!last || last[0] !== position[0] || last[1] !== position[1]) {
+        const moved = !last || last[0] !== position[0] || last[1] !== position[1];
+        if (moved) {
             points.push(position);
             if (points.length > this.maxTrailPoints) points.shift();
         }
 
+        // Redraw only on change: setLatLngs re-projects every point of the
+        // trail (up to maxTrailPoints), which per aircraft per poll adds up.
         const line = this.trailLines.get(hex);
         if (line) {
-            line.setLatLngs(points);
-            line.setStyle({ color });
+            if (moved) line.setLatLngs(points);
+            if (line.options.color !== color) line.setStyle({ color });
         } else if (points.length > 1) {
             const trail = L.polyline(points, { color, weight: 2, opacity: 0.6 });
             trail.addTo(this.map);
