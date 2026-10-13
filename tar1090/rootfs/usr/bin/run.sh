@@ -7,15 +7,18 @@ CONFIG_PATH=/data/options.json
 [ -r "$CONFIG_PATH" ] || bashio::exit.nok "Cannot read $CONFIG_PATH"
 
 # Read all options in one jq pass instead of one jq process per key.
-# @tsv turns null into "" (same as the old select(. != null) -> empty fallback)
-# and separates fields with tabs, which read -r splits with a tab IFS.
-IFS=$'\t' read -r TAR1090_HOST TAR1090_PORT UPDATE_INTERVAL SHOW_HISTORY \
+# null becomes "" (same as the old select(. != null) -> empty fallback).
+# Fields are joined with the ASCII unit separator (0x1f), not tabs: tab is IFS
+# whitespace, so read would collapse an empty field (e.g. a cleared
+# tar1090_host) and shift every later option into the wrong variable, and
+# @tsv would also double any backslash in a value.
+IFS=$'\x1f' read -r TAR1090_HOST TAR1090_PORT UPDATE_INTERVAL SHOW_HISTORY \
     MAP_CENTER_LAT MAP_CENTER_LON MAP_ZOOM AUTO_CENTER \
     MAP_PROVIDER CARTO_API_KEY < <(jq -r '[
         .tar1090_host, .tar1090_port, .update_interval, .show_history,
         .map_center_lat, .map_center_lon, .map_zoom, .auto_center,
         .map_provider, .carto_api_key
-    ] | @tsv' "$CONFIG_PATH")
+    ] | map(if . == null then "" else tostring end) | join("\u001f")' "$CONFIG_PATH")
 
 bashio::log.info "Starting Tar1090 Aircraft Tracker with Ingress..."
 
