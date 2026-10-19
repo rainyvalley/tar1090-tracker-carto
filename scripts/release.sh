@@ -62,10 +62,11 @@ DATE=$(date +%Y-%m-%d)
 for f in "${CHANGELOGS[@]}"; do
     echo "📋 Updating $f..."
     tmp=$(mktemp)
-    awk -v heading="## [$VERSION] - $DATE" -v summary="$SUMMARY" '
+    # ENVIRON, not -v: awk -v would interpret backslash escapes in the summary
+    HEADING="## [$VERSION] - $DATE" SUMMARY="$SUMMARY" awk '
         !done && /^## \[Unreleased\]/ {
-            print; print ""; print heading
-            if (summary != "") { print ""; print summary }
+            print; print ""; print ENVIRON["HEADING"]
+            if (ENVIRON["SUMMARY"] != "") { print ""; print ENVIRON["SUMMARY"] }
             done = 1; next
         }
         { print }
