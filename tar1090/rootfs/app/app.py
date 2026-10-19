@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import json
+import math
 import time
 import signal
 import ipaddress
@@ -69,6 +70,8 @@ def get_config_value(key, default, value_type=str):
             value = int(value)
         elif value_type == float:
             value = float(value)
+            if not math.isfinite(value):  # "nan"/"inf" would serialise as invalid JSON
+                raise ValueError("not a finite number")
         elif value_type == bool:
             value = str(value).lower() in ('true', '1', 'yes', 'on')
         else:
@@ -386,7 +389,7 @@ def get_stats():
         current_aircraft = [] if stale else aircraft_data.get('aircraft', [])
 
         # Calculate some basic stats
-        aircraft_with_position = [a for a in current_aircraft if 'lat' in a and 'lon' in a]
+        aircraft_with_position = [a for a in current_aircraft if a.get('lat') is not None and a.get('lon') is not None]
         aircraft_with_callsign = [a for a in current_aircraft
                                   if isinstance(a.get('flight'), str) and a['flight'].strip()]
 
