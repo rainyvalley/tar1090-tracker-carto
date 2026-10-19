@@ -116,3 +116,8 @@ def test_secret_value_masked_in_log(monkeypatch, options_file, caplog):
 def test_secret_default_not_masked_when_unset(monkeypatch, options_file):
     monkeypatch.delenv('CARTO_API_KEY', raising=False)
     assert app.get_config_value('carto_api_key', 'unset-marker') == 'unset-marker'
+
+@pytest.mark.parametrize('bad', ['nan', 'inf', '-inf'])
+def test_non_finite_float_falls_back_to_default(monkeypatch, options_file, bad):
+    monkeypatch.setenv('MAP_CENTER_LAT', bad)
+    assert app.get_config_value('map_center_lat', 54.7, float) == 54.7
