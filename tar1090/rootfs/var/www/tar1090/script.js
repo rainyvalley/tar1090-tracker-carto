@@ -293,9 +293,22 @@ class AircraftTracker {
                 this.updateConnectionStatus('disconnected');
             }
             // Schedule the next poll only after this one finished, so slow
-            // responses can't pile up or arrive out of order.
+            // responses can't pile up or arrive out of order. A hidden tab
+            // stops polling (and re-rendering markers) until it is shown.
+            schedule();
+        };
+        const schedule = () => {
+
+            if (document.hidden) { waiting = true; return; }
             setTimeout(updateData, interval);
         };
+        let waiting = false;
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && waiting) {
+                waiting = false;
+                updateData();
+            }
+        });
 
         await updateData();
     }
