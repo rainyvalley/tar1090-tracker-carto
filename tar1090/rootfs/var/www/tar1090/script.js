@@ -298,7 +298,6 @@ class AircraftTracker {
             schedule();
         };
         const schedule = () => {
-
             if (document.hidden) { waiting = true; return; }
             setTimeout(updateData, interval);
         };
