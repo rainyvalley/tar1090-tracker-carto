@@ -33,7 +33,7 @@ See [CHANGELOG.md](CHANGELOG.md) for the detailed history.
    https://github.com/rainyvalley/tar1090-tracker-carto
    ```
 
-2. Install the **"Tar1090 Aircraft Tracker (Carto)"** add-on
+2. Install the **"Tar1090 Aircraft Tracker"** add-on (this repo: `tar1090-tracker-carto`)
 3. **Configure the add-on** on the "Configuration" tab:
    - **Tar1090 Host**: Your tar1090 server IP (e.g. `192.0.2.100`)
    - **Tar1090 Port**: Usually `8080` (default)

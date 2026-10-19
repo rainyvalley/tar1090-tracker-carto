@@ -31,7 +31,7 @@ simple-start.sh                     # standalone run outside HA
 One command, from a clean `main`:
 
 ```bash
-./scripts/release.sh 1.3.1 "Faster start-up and a lighter dashboard poll"
+./scripts/release.sh 1.3.4 "One-line summary of the change"
 ```
 
 It bumps `tar1090/config.yaml`, promotes `## [Unreleased]` → `## [<version>] - <date>`
@@ -64,7 +64,7 @@ That is exactly what happened here. `2d4ec64` released **1.3.0**, then
 `eef99f1` (OCI labels, release-script trailers) and `925c31f` (single-pass
 option reads, halved dashboard polling) landed on top **without a bump**, so
 `config.yaml` still read 1.3.0 and HA offered nothing — those two commits were
-undeliverable until `e27b9af` bumped to **1.3.1**.
+undeliverable until `e27b9af` bumped to **1.3.1** (the same trap caught later bumps: 1.3.2 and 1.3.3 are the shipped history since).
 
 Sanity check before pushing — the `config.yaml` line must be the *newer* of the
 two; if the add-on files name a commit that came after it, the version is stale:
