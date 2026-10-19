@@ -44,7 +44,11 @@ def config_version():
 
 
 def newest_tag():
-    tags = [t[1:] for t in git('tag', '--list').splitlines() if re.match(r'^v\d', t)]
+    # release.sh pushes main and the tag together, so the tag for the commit
+    # under test may already exist; it must not count as the version to beat.
+    at_head = set(git('tag', '--points-at', 'HEAD').split())
+    tags = [t[1:] for t in git('tag', '--list').splitlines()
+            if re.match(r'^v\d', t) and t not in at_head]
     tags = [t for t in tags if SEMVER_RE.match(t)]
     if not tags:
         return None
