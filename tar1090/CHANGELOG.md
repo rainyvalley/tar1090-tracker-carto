@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-10-19
+
+Cache vendored libraries, pause polling in hidden tabs, reject non-finite config values, count only positioned aircraft
+
 ### Changed
 - **Faster page loads.** Vendored Leaflet/MapLibre files are cached by the
   browser for a day, and the map pauses polling while its tab is hidden.
