@@ -24,7 +24,17 @@ STATIC_DIR = os.path.normpath(os.path.join(
 
 # Create Flask app with support for Home Assistant ingress. static_url_path=''
 # serves every file under the static folder from the site root.
-app = Flask(__name__, static_folder=STATIC_DIR, static_url_path='')
+class _App(Flask):
+    def get_send_file_max_age(self, name):
+        # Vendored Leaflet/MapLibre (~1.3 MB, version-pinned) would otherwise
+        # be revalidated per file on every page load; let browsers reuse them
+        # for a day. The app's own files keep revalidating.
+        if name and name.replace(os.sep, '/').startswith('vendor/'):
+            return 86400
+        return super().get_send_file_max_age(name)
+
+
+app = _App(__name__, static_folder=STATIC_DIR, static_url_path='')
 
 # Configure logging. Per-poll and per-request messages are DEBUG so the
 # Supervisor log is not flooded; connection changes are logged at INFO/WARNING.
