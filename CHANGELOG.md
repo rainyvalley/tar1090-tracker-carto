@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Faster page loads.** Vendored Leaflet/MapLibre files are cached by the
+  browser for a day, and the map pauses polling while its tab is hidden.
+
+### Fixed
+- Non-finite (`nan`/`inf`) float config values are rejected, and `/stats`
+  counts only aircraft with a position.
+
 ## [1.3.3] - 2026-10-13
 
 Smoother aircraft list (rows are updated in place instead of rebuilt each poll) and fewer redundant marker updates.
