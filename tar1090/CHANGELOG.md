@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Safer defaults.** `simple-start.sh` now listens on `127.0.0.1` only; set
+  `BIND_HOST=0.0.0.0` to allow other devices. The add-on runs as a non-root
+  user. `/api/config` no longer returns `tar1090_host` and `tar1090_port`.
+- **Input checks.** Aircraft with an invalid hex are dropped, an invalid
+  lat/lon is removed, `/api/history?limit=` rejects bad values with HTTP 400,
+  and `/stats` counts a position only when it is valid.
+- **Less memory.** History keeps at most one snapshot every 5 seconds and
+  skips feeds of more than 2000 aircraft. Responses over 4 MB are refused.
+- The poller no longer follows redirects from tar1090.
+- New optional `FRAME_ANCESTORS` setting adds a CSP `frame-ancestors` rule.
+
+### Fixed
+- Helicopters (category A7) no longer get the largest icon.
+
 ## [1.3.4] - 2026-10-19
 
 Cache vendored libraries, pause polling in hidden tabs, reject non-finite config values, count only positioned aircraft
@@ -17,7 +32,8 @@ Cache vendored libraries, pause polling in hidden tabs, reject non-finite config
 
 ### Fixed
 - Non-finite (`nan`/`inf`) float config values are rejected, and `/stats`
-  counts only aircraft with a position.
+  `aircraft_with_position` counts only aircraft with a position
+  (`total_aircraft` counts all).
 
 ## [1.3.3] - 2026-10-13
 
