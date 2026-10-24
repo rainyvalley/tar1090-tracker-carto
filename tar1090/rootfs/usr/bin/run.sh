@@ -37,6 +37,7 @@ export MAP_PROVIDER
 export CARTO_API_KEY
 
 # Start the Python app with ingress support. exec so it receives SIGTERM
-# directly when the add-on is stopped.
+# directly when the add-on is stopped. The options file is read above as root;
+# the web server itself runs as the unprivileged "tracker" user.
 cd /app || bashio::exit.nok "Cannot change to /app"
-exec python3 app.py
+exec su-exec tracker python3 app.py

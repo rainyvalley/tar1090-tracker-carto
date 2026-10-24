@@ -15,7 +15,9 @@ RUN \
         python3 \
         py3-flask \
         py3-requests \
-        py3-waitress
+        py3-waitress \
+        su-exec \
+    && adduser -S -D -H -u 10001 tracker
 
 # Copy root filesystem
 COPY rootfs /

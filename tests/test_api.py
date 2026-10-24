@@ -110,8 +110,6 @@ def test_trails_fresh_multi_point_only(client):
 @pytest.mark.usefixtures('reset_state_fixture')
 def test_config_endpoint_reports_module_config(client):
     body = client.get('/api/config').get_json()
-    assert body['tar1090_host'] == app.TAR1090_HOST
-    assert body['tar1090_port'] == app.TAR1090_PORT
     assert body['update_interval'] == app.UPDATE_INTERVAL
     assert body['map_provider'] == app.MAP_PROVIDER
     assert body['carto_api_key'] == app.CARTO_API_KEY
@@ -150,3 +148,31 @@ def test_history_limit(client):
     assert one[0]['aircraft'] == [{"hex": "d4e5f6", "lat": 55.0, "lon": -2.0}]
     none = client.get('/api/history?limit=0').get_json()['history']
     assert none == []
+
+@pytest.mark.usefixtures('reset_state_fixture')
+def test_config_hides_tar1090_address(client):
+    body = client.get('/api/config').get_json()
+    assert 'tar1090_host' not in body
+    assert 'tar1090_port' not in body
+
+
+@pytest.mark.usefixtures('reset_state_fixture')
+def test_stats_position_count_ignores_bad_positions(client):
+    feed_aircraft([{"hex": "a1b2c3", "lat": 54.0, "lon": -1.0},
+                   {"hex": "d4e5f6", "lat": "x", "lon": -1.0},
+                   {"hex": "a1b2c4", "lat": 95, "lon": 1.0}])
+    body = client.get('/api/stats').get_json()
+    assert body['total_aircraft'] == 3
+    assert body['aircraft_with_position'] == 1
+
+
+@pytest.mark.usefixtures('reset_state_fixture')
+@pytest.mark.parametrize('value', ['abc', '-1', '1.5', ''])
+def test_history_limit_invalid_is_400(client, value):
+    resp = client.get('/api/history?limit=' + value)
+    assert resp.status_code == 400
+    assert 'limit' in resp.get_json()['error']
+
+
+def test_frame_ancestors_not_set_by_default(client):
+    assert 'frame-ancestors' not in client.get('/ping').headers['Content-Security-Policy']

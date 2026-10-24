@@ -579,8 +579,11 @@ class AircraftTracker {
         const category = aircraft.category;
         const type = aircraft.type;
         
+        // Helicopters (ADS-B category A7 is rotorcraft)
+        if (category === 'A7') return 20;
+
         // Large aircraft (A380, B747, etc.)
-        if (type.includes('A38') || type.includes('B74') || category === 'A7') return 32;
+        if (type.includes('A38') || type.includes('B74')) return 32;
         
         // Wide-body aircraft (B777, A330, etc.)
         if (type.includes('B77') || type.includes('A33') || type.includes('A34') || category === 'A5') return 28;
@@ -622,7 +625,7 @@ class AircraftTracker {
 
         // Create FlightAware link if we have registration or callsign
         const faUrl = this.flightAwareUrl(aircraft);
-        const fr24Link = faUrl
+        const faLink = faUrl
             ? `<div style="margin-top: 8px;"><a href="${esc(faUrl)}" target="_blank" rel="noopener noreferrer" style="color: #00aaff; text-decoration: none; font-weight: bold;">📡 View on FlightAware</a></div>`
             : '';
 
@@ -636,7 +639,7 @@ class AircraftTracker {
                 <div><strong>Track:</strong> ${esc(track)}</div>
                 <div><strong>Squawk:</strong> ${esc(squawk)}</div>
                 ${aircraft.category ? `<div><strong>Category:</strong> ${esc(aircraft.category)}</div>` : ''}
-                ${fr24Link}
+                ${faLink}
             </div>
         `;
     }

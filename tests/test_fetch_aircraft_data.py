@@ -6,6 +6,8 @@ import app
 
 
 class FakeResponse:
+    status_code = 200
+
     def __init__(self, body):
         self.body = body
 
@@ -47,3 +49,21 @@ def test_non_aircraft_json_rejected(monkeypatch):
     data, error = app.fetch_aircraft_data()
     assert data is None
     assert 'aircraft.json' in error
+
+
+def test_redirects_are_not_followed(monkeypatch):
+    seen = {}
+
+    class RedirectResponse(FakeResponse):
+        status_code = 302
+
+    class RedirectSession(FakeSession):
+        def get(self, url, **kwargs):
+            seen.update(kwargs)
+            return RedirectResponse(b'')
+
+    monkeypatch.setattr(app, '_session', RedirectSession(b''))
+    data, error = app.fetch_aircraft_data()
+    assert data is None
+    assert 'redirect' in error
+    assert seen['allow_redirects'] is False

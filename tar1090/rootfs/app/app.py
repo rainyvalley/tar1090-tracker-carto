@@ -147,8 +147,12 @@ TAR1090_URL = build_tar1090_url(TAR1090_HOST, TAR1090_PORT)
 
 # Upper bound on a single aircraft.json body. A busy feeder produces well
 # under 1 MB; anything far larger is a misconfiguration (e.g. an aggregator).
-MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 HISTORY_LENGTH = 12  # snapshots kept for /api/history; the UI does not use them
+# Memory cap for /api/history: at most one snapshot per HISTORY_MIN_SPACING
+# seconds, and none for a feed with more than HISTORY_MAX_AIRCRAFT aircraft.
+HISTORY_MIN_SPACING = 5
+HISTORY_MAX_AIRCRAFT = 2000
 # Data older than this is treated as stale: the API stops serving aircraft
 # and health reports "degraded".
 STALE_AFTER = max(10, 3 * UPDATE_INTERVAL + 5)
@@ -157,6 +161,7 @@ STALE_AFTER = max(10, 3 * UPDATE_INTERVAL + 5)
 aircraft_data = {"aircraft": [], "now": 0, "messages": 0}
 aircraft_history = deque(maxlen=HISTORY_LENGTH)
 last_success = None  # time.monotonic() of the last good fetch
+last_history = None  # time.monotonic() of the last stored history snapshot
 data_lock = threading.Lock()
 
 # Per-aircraft flight paths for the UI's trail toggle, recorded server-side so
@@ -175,11 +180,39 @@ trails = {}  # hex -> {"points": [[lat, lon], ...], "last_point": t, "seen": t}
 _session = requests.Session()
 
 
+_HEX_RE = re.compile(r'~?[0-9a-f]{6}')
+
+
+def valid_position(ac):
+    """True if the record has a numeric lat in -90..90 and lon in -180..180."""
+    lat, lon = ac.get('lat'), ac.get('lon')
+    if isinstance(lat, bool) or isinstance(lon, bool):
+        return False
+    if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
+        return False
+    return -90 <= lat <= 90 and -180 <= lon <= 180
+
+
 def sanitize_aircraft_data(data):
-    """Return data if it looks like tar1090's aircraft.json, else None."""
+    """Return data if it looks like tar1090's aircraft.json, else None.
+
+    Records that are not objects or have no valid ICAO hex are dropped. A bad
+    lat/lon pair is removed from its record, so the aircraft stays listed
+    without a position.
+    """
     if not isinstance(data, dict) or not isinstance(data.get('aircraft'), list):
         return None
-    data['aircraft'] = [a for a in data['aircraft'] if isinstance(a, dict)]
+    clean = []
+    for ac in data['aircraft']:
+        if not isinstance(ac, dict):
+            continue
+        hex_id = ac.get('hex')
+        if not isinstance(hex_id, str) or not _HEX_RE.fullmatch(hex_id.strip().lower()):
+            continue
+        if ('lat' in ac or 'lon' in ac) and not valid_position(ac):
+            ac = {k: v for k, v in ac.items() if k not in ('lat', 'lon')}
+        clean.append(ac)
+    data['aircraft'] = clean
     return data
 
 
@@ -187,13 +220,9 @@ def record_trails(aircraft, now):
     """Add the latest positions to the trails; call with data_lock held."""
     for ac in aircraft:
         hex_id = str(ac.get('hex', '')).strip().lower()
-        lat, lon = ac.get('lat'), ac.get('lon')
-        if not hex_id or isinstance(lat, bool) or isinstance(lon, bool):
+        if not hex_id or not valid_position(ac):
             continue
-        if not isinstance(lat, (int, float)) or not isinstance(lon, (int, float)):
-            continue
-        if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-            continue
+        lat, lon = ac['lat'], ac['lon']
         trail = trails.setdefault(hex_id, {"points": [], "last_point": 0, "seen": now})
         trail["seen"] = now
         points = trail["points"]
@@ -216,7 +245,12 @@ def fetch_aircraft_data():
     try:
         # A keep-alive connection that tar1090 closed can fail one poll; that is
         # absorbed because STALE_AFTER >= 10 s spans several poll intervals.
-        with _session.get(TAR1090_URL, timeout=5, stream=True) as response:
+        # Redirects are not followed: a tar1090 host must not be able to
+        # steer the poller to another URL.
+        with _session.get(TAR1090_URL, timeout=5, stream=True,
+                          allow_redirects=False) as response:
+            if 300 <= response.status_code < 400:
+                return None, f"tar1090 answered with a redirect (HTTP {response.status_code}), which is not followed"
             response.raise_for_status()
             body = bytearray()
             for chunk in response.iter_content(chunk_size=65536):
@@ -243,7 +277,7 @@ def data_is_stale():
 
 def update_aircraft_data():
     """Background thread to continuously update aircraft data"""
-    global aircraft_data, last_success
+    global aircraft_data, last_success, last_history
 
     connected = None
     next_run = time.monotonic()
@@ -259,8 +293,11 @@ def update_aircraft_data():
             with data_lock:
                 aircraft_data = new_data
                 last_success = time.monotonic()
-                if SHOW_HISTORY:
+                if (SHOW_HISTORY and len(new_data['aircraft']) <= HISTORY_MAX_AIRCRAFT
+                        and (last_history is None
+                             or last_success - last_history >= HISTORY_MIN_SPACING)):
                     aircraft_history.append(new_data)
+                    last_history = last_success
                 record_trails(new_data['aircraft'], last_success)
             count = len(new_data['aircraft'])
             if connected is not True:
@@ -284,8 +321,16 @@ def update_aircraft_data():
 
 # Content Security Policy for the UI. Basemaps load from Carto (vector style,
 # tiles, sprites, fonts) and Esri; MapLibre runs its tile workers from blob:
-# URLs. Inline styles are needed for Leaflet markers and popups. No
-# frame-ancestors / X-Frame-Options: the page is embedded by HA ingress.
+# URLs. Inline styles are needed for Leaflet markers and popups. By default
+# there is no frame-ancestors: the page is embedded by HA ingress and by
+# dashboard iframes. Set FRAME_ANCESTORS (for example 'self') to restrict
+# who may embed it, e.g. for a standalone run.
+_FRAME_ANCESTORS_RE = re.compile(r"[A-Za-z0-9:/.*' -]+")
+FRAME_ANCESTORS = get_config_value('FRAME_ANCESTORS', '').strip()
+if FRAME_ANCESTORS and not _FRAME_ANCESTORS_RE.fullmatch(FRAME_ANCESTORS):
+    logger.warning("Ignoring FRAME_ANCESTORS: it contains characters that are not allowed")
+    FRAME_ANCESTORS = ''
+
 CONTENT_SECURITY_POLICY = "; ".join([
     "default-src 'self'",
     "script-src 'self'",
@@ -298,7 +343,7 @@ CONTENT_SECURITY_POLICY = "; ".join([
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'none'",
-])
+] + ([f"frame-ancestors {FRAME_ANCESTORS}"] if FRAME_ANCESTORS else []))
 
 
 @app.after_request
@@ -330,7 +375,14 @@ def get_aircraft_history():
     if not SHOW_HISTORY:
         return jsonify({"error": "History not enabled"}), 400
 
-    limit = request.args.get('limit', type=int)
+    limit = None
+    if 'limit' in request.args:
+        try:
+            limit = int(request.args['limit'])
+        except ValueError:
+            limit = -1
+        if limit < 0:
+            return jsonify({"error": "limit must be a whole number, 0 or more"}), 400
     with data_lock:
         history = list(aircraft_history)
     if limit is not None:
@@ -358,8 +410,6 @@ def get_config():
     Carto tiles, so it is a client-side key (restrict it by domain at Carto).
     """
     return jsonify({
-        "tar1090_host": TAR1090_HOST,
-        "tar1090_port": TAR1090_PORT,
         "update_interval": UPDATE_INTERVAL,
         "show_history": SHOW_HISTORY,
         "auto_center": AUTO_CENTER,
@@ -399,7 +449,7 @@ def get_stats():
         current_aircraft = [] if stale else aircraft_data.get('aircraft', [])
 
         # Calculate some basic stats
-        aircraft_with_position = [a for a in current_aircraft if a.get('lat') is not None and a.get('lon') is not None]
+        aircraft_with_position = [a for a in current_aircraft if valid_position(a)]
         aircraft_with_callsign = [a for a in current_aircraft
                                   if isinstance(a.get('flight'), str) and a['flight'].strip()]
 

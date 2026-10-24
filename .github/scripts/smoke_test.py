@@ -30,8 +30,8 @@ assert aircraft['stale'] is True and aircraft['aircraft'] == [], aircraft
 
 status, config = get('/api/config')
 assert status == 200, status
-assert config['tar1090_host'] == '192.0.2.100', config
-assert config['tar1090_port'] == 8080, config
+assert 'tar1090_host' not in config and 'tar1090_port' not in config, config
+assert config['map_provider'], config
 
 with urllib.request.urlopen(BASE + '/', timeout=5) as response:
     index = response.read().decode()
