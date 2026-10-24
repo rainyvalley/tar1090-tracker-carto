@@ -46,7 +46,7 @@ LABEL \
     org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
     org.opencontainers.image.vendor="rainyvalley" \
     org.opencontainers.image.authors="rainyvalley <68121220+rainyvalley@users.noreply.github.com>" \
-    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.licenses="BSD-2-Clause" \
     org.opencontainers.image.url="https://github.com/rainyvalley/tar1090-tracker-carto" \
     org.opencontainers.image.source="https://github.com/rainyvalley/tar1090-tracker-carto" \
     org.opencontainers.image.documentation="https://github.com/rainyvalley/tar1090-tracker-carto/blob/main/README.md" \

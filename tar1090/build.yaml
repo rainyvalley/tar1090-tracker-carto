@@ -9,5 +9,5 @@ labels:
   org.opencontainers.image.title: "Tar1090 Aircraft Tracker"
   org.opencontainers.image.description: "Displays aircraft from tar1090 on an interactive map"
   org.opencontainers.image.source: "https://github.com/rainyvalley/tar1090-tracker-carto"
-  org.opencontainers.image.licenses: "MIT"
+  org.opencontainers.image.licenses: "BSD-2-Clause"
 args: {}

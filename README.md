@@ -175,7 +175,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes in each relea
 - Upstream tar1090 ADS-B interface: **[wiedehopf/tar1090](https://github.com/wiedehopf/tar1090)**.
 - This fork adds selectable Carto base maps and switches flight links from FlightRadar24 to FlightAware.
 
-Base map tiles are © OpenStreetMap contributors and © CARTO; satellite imagery © Esri. This add-on is distributed under the same **MIT License** as the upstream project; see [LICENSE](LICENSE).
+Base map tiles are © OpenStreetMap contributors and © CARTO; satellite imagery © Esri. This add-on is under the **BSD 2-Clause License**; see [LICENSE](LICENSE).
 
 ## A note on AI assistance
 
