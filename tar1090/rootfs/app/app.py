@@ -7,6 +7,7 @@ import json
 import math
 import time
 import signal
+import ssl
 import ipaddress
 import logging
 import threading
@@ -556,8 +557,11 @@ if __name__ == '__main__':
         logger.warning(line)
     if TLS_CERT and TLS_KEY:
         logger.info(f"Starting web server (HTTPS) on {BIND_HOST}:{PORT}")
-        serve_https(app, BIND_HOST, PORT, TLS_CERT, TLS_KEY)
-        sys.exit(0)
+        try:
+            serve_https(app, BIND_HOST, PORT, TLS_CERT, TLS_KEY)
+            sys.exit(0)
+        except (OSError, ssl.SSLError) as e:
+            logger.warning(f"HTTPS failed ({e}). Using plain HTTP.")
 
     try:
         from waitress import serve

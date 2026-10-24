@@ -86,6 +86,7 @@ WEB_TLS_CERT=certs/tracker.crt WEB_TLS_KEY=certs/tracker.key ./simple-start.sh
 |---|---|---|
 | Browser warns about the certificate | It is self-signed. | Accept it once, or import `tracker.crt`. |
 | Log says "must both be set" | Only one of the two settings is set. | Set both, or neither. |
+| Log says "HTTPS failed ... Using plain HTTP" | The cert or key file is missing, unreadable or does not match. | Fix the files and restart. |
 | Log says "Serving plain HTTP on 0.0.0.0" | You listen on the network without HTTPS. | Set the two settings, or use `BIND_HOST=127.0.0.1`. |
 
 With curl, add `--cacert certs/tracker.crt`.
