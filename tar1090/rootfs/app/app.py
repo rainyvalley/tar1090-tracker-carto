@@ -142,6 +142,10 @@ MAP_ZOOM = get_config_value('MAP_ZOOM', 8, int)
 # standalone runs (simple-start.sh) may override them.
 BIND_HOST = get_config_value('BIND_HOST', '0.0.0.0')
 PORT = get_config_value('WEB_PORT', 5000, int)
+# Optional HTTPS for standalone runs: set both to certificate and key file
+# paths. Unset means plain HTTP. (The add-on is reached through ingress.)
+TLS_CERT = get_config_value('WEB_TLS_CERT', '').strip()
+TLS_KEY = get_config_value('WEB_TLS_KEY', '').strip()
 
 TAR1090_URL = build_tar1090_url(TAR1090_HOST, TAR1090_PORT)
 
@@ -482,6 +486,60 @@ def _handle_sigterm(signum, frame):
     sys.exit(0)
 
 
+def tls_warnings(bind_host, cert, key, addon=False):
+    """Plain-language startup notes about HTTPS (empty list = nothing to say)."""
+    if bool(cert) != bool(key):
+        return ["WEB_TLS_CERT and WEB_TLS_KEY must both be set to turn on "
+                "HTTPS; only one is set."]
+    if cert or addon:
+        return []
+    if bind_host in ('127.0.0.1', '::1', 'localhost'):
+        return []
+    return [f"Serving plain HTTP on {bind_host}: the page and the Carto key "
+            "it contains can be read on the network. Set WEB_TLS_CERT and "
+            "WEB_TLS_KEY to serve HTTPS."]
+
+
+def serve_https(flask_app, host, port, cert, key):
+    """Serve the app over HTTPS with the standard library (no extra package).
+
+    Each connection is wrapped in its own thread with a handshake timeout, so
+    a client that stalls during the handshake cannot block the others.
+    """
+    import socket
+    import ssl
+    from socketserver import ThreadingMixIn
+    from wsgiref.simple_server import (WSGIServer, WSGIRequestHandler,
+                                       make_server)
+
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.load_cert_chain(cert, key)
+
+    class QuietHandler(WSGIRequestHandler):
+        def log_message(self, fmt, *args):
+            logger.debug("%s - %s", self.client_address[0], fmt % args)
+
+    class TLSServer(ThreadingMixIn, WSGIServer):
+        daemon_threads = True
+        address_family = (socket.AF_INET6 if ':' in host
+                          else socket.AF_INET)
+
+        def process_request_thread(self, request, client_address):
+            try:
+                request.settimeout(10)
+                request = context.wrap_socket(request, server_side=True)
+            except (OSError, ssl.SSLError) as e:
+                logger.debug("TLS handshake from %s failed: %s", client_address[0], e)
+                self.close_request(request)
+                return
+            super().process_request_thread(request, client_address)
+
+    server = make_server(host, port, flask_app, server_class=TLSServer,
+                         handler_class=QuietHandler)
+    server.serve_forever()
+
+
 if __name__ == '__main__':
     logger.info("Starting Tar1090 Aircraft Tracker API")
     logger.info(f"Polling tar1090 at {TAR1090_URL} every {UPDATE_INTERVAL}s")
@@ -492,6 +550,14 @@ if __name__ == '__main__':
     # Start background thread for data updates
     update_thread = threading.Thread(target=update_aircraft_data, daemon=True)
     update_thread.start()
+
+    for line in tls_warnings(BIND_HOST, TLS_CERT, TLS_KEY,
+                             addon=bool(os.getenv('TRACKER_ADDON'))):
+        logger.warning(line)
+    if TLS_CERT and TLS_KEY:
+        logger.info(f"Starting web server (HTTPS) on {BIND_HOST}:{PORT}")
+        serve_https(app, BIND_HOST, PORT, TLS_CERT, TLS_KEY)
+        sys.exit(0)
 
     try:
         from waitress import serve

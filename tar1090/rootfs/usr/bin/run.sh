@@ -35,6 +35,8 @@ export MAP_ZOOM
 export AUTO_CENTER
 export MAP_PROVIDER
 export CARTO_API_KEY
+# Tells app.py it is behind ingress, so it skips the plain-HTTP note.
+export TRACKER_ADDON=1
 
 # Start the Python app with ingress support. exec so it receives SIGTERM
 # directly when the add-on is stopped. The options file is read above as root;

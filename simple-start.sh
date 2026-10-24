@@ -23,6 +23,11 @@ BIND_HOST=${BIND_HOST:-"127.0.0.1"}
 WEB_PORT=${WEB_PORT:-"8099"}
 # Optional CSP frame-ancestors value, e.g. "'self'". Empty = no restriction.
 FRAME_ANCESTORS=${FRAME_ANCESTORS:-""}
+# Optional HTTPS: paths to a certificate and its key (see scripts/make-cert.sh)
+WEB_TLS_CERT=${WEB_TLS_CERT:-""}
+WEB_TLS_KEY=${WEB_TLS_KEY:-""}
+SCHEME=http
+[ -n "$WEB_TLS_CERT" ] && [ -n "$WEB_TLS_KEY" ] && SCHEME=https
 
 # Best-effort LAN address for the startup message (Linux, then macOS)
 if [ "$BIND_HOST" = "0.0.0.0" ]; then
@@ -35,11 +40,11 @@ fi
 
 echo "Starting Tar1090 Aircraft Tracker..."
 echo "Connecting to tar1090 at ${TAR1090_HOST}:${TAR1090_PORT}"
-echo "Web interface will be at http://${ADDR}:${WEB_PORT}"
+echo "Web interface will be at ${SCHEME}://${ADDR}:${WEB_PORT}"
 
 export TAR1090_HOST TAR1090_PORT UPDATE_INTERVAL SHOW_HISTORY
 export MAP_CENTER_LAT MAP_CENTER_LON MAP_ZOOM AUTO_CENTER
-export MAP_PROVIDER CARTO_API_KEY BIND_HOST WEB_PORT FRAME_ANCESTORS
+export MAP_PROVIDER CARTO_API_KEY BIND_HOST WEB_PORT FRAME_ANCESTORS WEB_TLS_CERT WEB_TLS_KEY
 
 # Start the Python app
 cd "$(dirname "$0")/tar1090/rootfs/app" || exit 1

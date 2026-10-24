@@ -62,6 +62,34 @@ Every option in [Configuration](#configuration) can be set as an upper-case envi
 
 **Embedding.** To stop other sites from putting the page in a frame, set `FRAME_ANCESTORS="'self'"`. If you embed the page in a Home Assistant dashboard, add your Home Assistant address instead, for example `FRAME_ANCESTORS="'self' http://homeassistant.local:8123"`. Unset by default.
 
+### Turn on HTTPS
+
+This is for the standalone server. In Home Assistant, ingress already uses your Home Assistant address. Without the two settings below the server stays plain HTTP.
+
+**1. Make a certificate.** Add your host name or IP after `certs` if you use one.
+
+```bash
+scripts/make-cert.sh certs tracker.local
+```
+
+It writes `certs/tracker.crt` and `certs/tracker.key`. To use your own certificate, skip this step.
+
+**2. Start with both paths set.**
+
+```bash
+WEB_TLS_CERT=certs/tracker.crt WEB_TLS_KEY=certs/tracker.key ./simple-start.sh
+```
+
+**3. Open** `https://localhost:8099`.
+
+| You see | It means | Do this |
+|---|---|---|
+| Browser warns about the certificate | It is self-signed. | Accept it once, or import `tracker.crt`. |
+| Log says "must both be set" | Only one of the two settings is set. | Set both, or neither. |
+| Log says "Serving plain HTTP on 0.0.0.0" | You listen on the network without HTTPS. | Set the two settings, or use `BIND_HOST=127.0.0.1`. |
+
+With curl, add `--cacert certs/tracker.crt`.
+
 ## FlightAware links
 
 Open an aircraft's popup and click **View on FlightAware**. Ctrl+click or right-click on the marker opens the same page.
