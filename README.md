@@ -37,7 +37,7 @@ It is a fork of [`random-robbie/tar1090-tracker`](https://github.com/random-robb
 
 4. Click **Save**, then **Start**. The add-on appears in the sidebar with an airplane icon.
 
-**Carto API key.** The Carto maps load without a key today. A free key from [carto.com/basemaps](https://carto.com/basemaps) is a fallback if Carto starts to require one. It also lets browsers without WebGL use Carto's flat tiles. Your browser uses the key, so anyone who can open the page can read it. Restrict it to your domain in the Carto dashboard.
+**Carto API key.** The Carto maps load without a key. A free key from [carto.com/basemaps](https://carto.com/basemaps) is a fallback if Carto starts to require one. It also lets browsers without WebGL use Carto's flat tiles. Your browser uses the key, so anyone who can open the page can read it. Restrict it to your domain in the Carto dashboard.
 
 **Local add-on.** To run it as a local add-on, put the `tar1090/` folder in `/addons/tar1090-carto/` on your Home Assistant host. Then use **Settings → Add-ons → Add-on Store → ⋮ → Check for updates**. It appears under **Local add-ons**. After you edit files there, use **Rebuild**, not just Restart.
 
@@ -58,7 +58,7 @@ You need Python 3 with Flask and Requests. Waitress is recommended.
 
 Every option in [Configuration](#configuration) can be set as an upper-case environment variable, for example `MAP_CENTER_LAT=51.5`.
 
-**Who can connect.** `simple-start.sh` listens on `127.0.0.1`, so only this machine can open the page. This default changed: older versions listened on all interfaces. To reach it from other devices on a network you trust, start it with `BIND_HOST=0.0.0.0 ./simple-start.sh`. The server has **no authentication**, so never forward the port to the internet.
+**Who can connect.** `simple-start.sh` listens on `127.0.0.1`, so only this machine can open the page. To reach it from other devices on a network you trust, start it with `BIND_HOST=0.0.0.0 ./simple-start.sh`. The server has **no authentication**, so never forward the port to the internet.
 
 **Embedding.** To stop other sites from putting the page in a frame, set `FRAME_ANCESTORS="'self'"`. If you embed the page in a Home Assistant dashboard, add your Home Assistant address instead, for example `FRAME_ANCESTORS="'self' http://homeassistant.local:8123"`. Unset by default.
 
@@ -202,7 +202,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes in each relea
 
 - Original project: **[random-robbie/tar1090-tracker](https://github.com/random-robbie/tar1090-tracker)** by [random-robbie](https://github.com/random-robbie). Full credit for the original add-on goes to the upstream author.
 - Upstream tar1090 ADS-B interface: **[wiedehopf/tar1090](https://github.com/wiedehopf/tar1090)**.
-- This fork adds selectable Carto base maps and switches flight links from FlightRadar24 to FlightAware.
+- This fork adds selectable Carto base maps and uses FlightAware for flight links.
 
 Base map tiles are © OpenStreetMap contributors and © CARTO; satellite imagery © Esri. This add-on is under the **BSD 2-Clause License**; see [LICENSE](LICENSE).
 
