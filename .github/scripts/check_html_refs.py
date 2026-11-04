@@ -2,8 +2,7 @@
 """CI check: every src= or href= in index.html resolves to a file in the tree.
 
 Relative URLs are resolved against tar1090/rootfs/var/www/tar1090/, the same
-way Flask's static serving does. Absolute and off-site URLs (https://, //)
-are skipped. Exits 1 with a ::error:: annotation on the first failure batch.
+way Flask's static serving does. Off-site URLs (https://, //) are skipped. Exits 1 with a ::error:: annotation on the first failure batch.
 """
 
 import os

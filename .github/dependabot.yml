@@ -1,8 +1,8 @@
-# Keep the container base images (Dockerfile/compose) and the GitHub
-# Actions SHAs current; a weekly pass opens one PR per update.
+# Keep the tar1090/Dockerfile base image and the Actions SHAs current; a
+# weekly pass opens one PR per update.
 version: 2
 updates:
-  # Container bases pinned by the Dockerfile/compose in this directory.
+  # Base image pinned by tar1090/Dockerfile.
   - package-ecosystem: docker
     directory: "/tar1090"
     schedule:

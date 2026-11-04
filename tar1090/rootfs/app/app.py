@@ -249,7 +249,7 @@ def fetch_aircraft_data():
     """Fetch aircraft data from tar1090. Returns (data, error)."""
     try:
         # A keep-alive connection that tar1090 closed can fail one poll; that is
-        # absorbed because STALE_AFTER >= 10 s spans several poll intervals.
+        # absorbed: STALE_AFTER >= 10 s spans several poll intervals.
         # Redirects are not followed: a tar1090 host must not be able to
         # steer the poller to another URL.
         with _session.get(TAR1090_URL, timeout=5, stream=True,

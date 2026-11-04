@@ -35,7 +35,7 @@ jobs:
           echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Check version deliverability
-        # GITHUB_EVENT_NAME/GITHUB_REF_TYPE tag this as a tag push to the script.
+        # Tag pushes are checked against the tag; other runs use push mode.
         run: python3 .github/scripts/check_version.py
 
       - name: Extract changelog for this version

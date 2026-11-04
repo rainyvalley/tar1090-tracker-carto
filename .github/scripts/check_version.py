@@ -44,8 +44,8 @@ def config_version():
 
 
 def newest_tag():
-    # release.sh pushes main and the tag together, so the tag for the commit
-    # under test may already exist; it must not count as the version to beat.
+    # A tag that points at HEAD is the commit under test; it must not count as
+    # the version to beat.
     at_head = set(git('tag', '--points-at', 'HEAD').split())
     tags = [t[1:] for t in git('tag', '--list').splitlines()
             if re.match(r'^v\d', t) and t not in at_head]

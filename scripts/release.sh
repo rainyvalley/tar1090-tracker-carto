@@ -50,7 +50,7 @@ done
 
 echo "🚀 Preparing release $VERSION..."
 
-# Update version in config.yaml (temp file instead of sed -i: portable, no .bak)
+# Update version in config.yaml via a temp file (portable, no .bak)
 echo "📝 Updating version in config.yaml..."
 tmp=$(mktemp)
 sed "s/^version: \".*\"/version: \"$VERSION\"/" tar1090/config.yaml > "$tmp"
@@ -62,7 +62,7 @@ DATE=$(date +%Y-%m-%d)
 for f in "${CHANGELOGS[@]}"; do
     echo "📋 Updating $f..."
     tmp=$(mktemp)
-    # ENVIRON, not -v: awk -v would interpret backslash escapes in the summary
+    # ENVIRON, not -v: -v mangles backslash escapes in the summary
     HEADING="## [$VERSION] - $DATE" SUMMARY="$SUMMARY" awk '
         !done && /^## \[Unreleased\]/ {
             print; print ""; print ENVIRON["HEADING"]

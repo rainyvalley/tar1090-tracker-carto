@@ -66,9 +66,8 @@ class AircraftTracker {
         // self-hosted apps under their tile usage policy.
         //
         // Carto layers are drawn from Carto's vector GL styles through
-        // MapLibre (bridged into Leaflet by maplibre-gl-leaflet). Since
-        // 2026-09-25 Carto's raster PNG tiles render "API KEY REQUIRED"
-        // without a key, while the vector styles still load keyless. An
+        // MapLibre (bridged into Leaflet by maplibre-gl-leaflet). Carto's
+        // raster PNG tiles require a key; the vector styles load keyless. An
         // optional carto_api_key is appended to every Carto request so the
         // map keeps working if Carto extends the key requirement to vector.
         // Browsers without WebGL fall back to Carto raster (only usable with
@@ -652,7 +651,7 @@ class AircraftTracker {
 
         const listContainer = document.getElementById('aircraft-items');
 
-        // Sort by callsign, then by hex
+        // Sort by callsign, falling back to hex
         const label = (ac) => ac.flight || ac.hex;
         const sorted = aircraft.slice().sort((a, b) => label(a).localeCompare(label(b)));
 
