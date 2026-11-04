@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-11-03
+
+Safer defaults, input checks and lower memory use
+
 ### Changed
 - **Safer defaults.** `simple-start.sh` now listens on `127.0.0.1` only; set
   `BIND_HOST=0.0.0.0` to allow other devices. The add-on runs as a non-root
