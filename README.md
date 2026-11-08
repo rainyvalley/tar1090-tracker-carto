@@ -152,12 +152,12 @@ carto_api_key: ""            # Optional Carto key
 |---|---|
 | `/api/aircraft` | Current aircraft. `"stale": true` and no aircraft when tar1090 has not answered for a while. |
 | `/api/trails` | Recorded path of each current aircraft: `{"trails": {"<hex>": [[lat, lon], ...]}}`. |
-| `/api/history` (also `/api/aircraft/history`) | Up to the last 12 snapshots, at most one every 5 seconds, when `show_history` is on. `?limit=N` returns the newest N. A `limit` that is not a whole number of 0 or more gives HTTP 400. |
+| `/api/history` (also `/api/aircraft/history`) | Up to the last 12 snapshots, at most one every 5 seconds and none for a feed of more than 2000 aircraft, when `show_history` is on. `?limit=N` returns the newest N. A `limit` that is not a whole number of 0 or more gives HTTP 400. |
 | `/api/config` | The map settings, including `carto_api_key`, which the browser needs. |
 | `/api/health` | `"healthy"`, or `"degraded"` when tar1090 data is stale. |
 | `/api/stats` | Counts. `total_aircraft` counts all aircraft. `aircraft_with_position` counts only those with a valid position. |
 
-Records with an invalid ICAO hex are dropped. A latitude outside -90 to 90 or a longitude outside -180 to 180 is removed from its record.
+Records with an invalid ICAO hex are dropped. A latitude outside -90 to 90 or a longitude outside -180 to 180 is removed from its record, and a tar1090 response larger than 4 MB is refused.
 
 ## Requirements
 

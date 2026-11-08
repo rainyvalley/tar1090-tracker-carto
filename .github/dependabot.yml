@@ -1,8 +1,13 @@
-# Keep the tar1090/Dockerfile base image and the Actions SHAs current; a
-# weekly pass opens one PR per update.
+# Keep the Actions SHAs current (and anything Dependabot can read out of the
+# Dockerfile); a weekly pass opens one PR per update. The add-on base image is
+# bumped by hand - see the note on the docker entry below.
 version: 2
 updates:
-  # Base image pinned by tar1090/Dockerfile.
+  # Dockerfile linting/pins. The base image itself is NOT visible to Dependabot:
+  # tar1090/Dockerfile starts with `FROM $BUILD_FROM`, and the per-arch tags live
+  # in tar1090/build.yaml. Bump those by hand (and check the tag exists for every
+  # arch in config.yaml first: ghcr.io/home-assistant/<arch>-base:<tag>, with
+  # `docker manifest inspect`).
   - package-ecosystem: docker
     directory: "/tar1090"
     schedule:

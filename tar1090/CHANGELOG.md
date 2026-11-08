@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Current Alpine base.** The add-on builds on `home-assistant/amd64-base:3.24` and
+  `aarch64-base:3.24` (Alpine 3.24, the current stable branch) instead of 3.22.
+  Home Assistant no longer publishes 3.23 or newer for `armhf`, `armv7` or `i386`,
+  so those three arches stay on 3.22, the last image built for them.
+- CI lints the Dockerfile with hadolint 2.15.1 and installs pytest 9.2.0.
+
 ## [1.3.5] - 2026-11-03
 
 Safer defaults, input checks and lower memory use

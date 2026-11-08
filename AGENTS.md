@@ -11,7 +11,8 @@ Python/Flask + vanilla JS — no compiled code. pytest suite in `tests/`;
 ```
 repository.json                     # HA add-on repository descriptor (no version field)
 tar1090/config.yaml                 # add-on manifest — the version lives here and nowhere else
-tar1090/build.yaml                  # HA base image 3.22 per arch + OCI labels
+tar1090/build.yaml                  # HA base image per arch (3.24 on 64-bit, 3.22 on the
+                                    # frozen 32-bit bases) + OCI labels
 tar1090/Dockerfile                  # python3 + flask/requests/waitress, CMD /usr/bin/run.sh
 tar1090/rootfs/usr/bin/run.sh       # reads /data/options.json, exports env, starts the app
 tar1090/rootfs/app/app.py           # Flask app + all /api/* endpoints

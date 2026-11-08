@@ -61,9 +61,9 @@ jobs:
 
       - name: Download hadolint
         run: |
-          HADOLINT_SHA256=56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010
+          HADOLINT_SHA256=c7187db94eeeeca956519a6af171adc31453941a1e777961f6e680f697c8c507
           curl -fsSL -o /usr/local/bin/hadolint \
-            https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+            https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-Linux-x86_64
           echo "$HADOLINT_SHA256  /usr/local/bin/hadolint" | sha256sum -c -
           chmod +x /usr/local/bin/hadolint
 
@@ -78,7 +78,7 @@ jobs:
         with:
           context: tar1090
           build-args: |
-            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.22
+            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.24
           tags: tar1090-tracker-carto:ci
           load: true
           cache-from: type=gha,scope=ci-dockerfile-${{ hashFiles('tar1090/Dockerfile') }}
