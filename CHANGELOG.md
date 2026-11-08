@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-11-07
+
+Move onto the current Alpine base
+
 ### Changed
 - **Current Alpine base.** The add-on builds on `home-assistant/amd64-base:3.24` and
   `aarch64-base:3.24` (Alpine 3.24, the current stable branch) instead of 3.22.
