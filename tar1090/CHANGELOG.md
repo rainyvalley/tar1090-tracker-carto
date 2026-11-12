@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Standalone HTTPS with relative certificate paths.** `simple-start.sh`
+  resolves `WEB_TLS_CERT` and `WEB_TLS_KEY` before it changes into the app
+  directory, so the documented `certs/tracker.crt` is found instead of the
+  server warning and falling back to plain HTTP.
+- **Private key permissions.** `scripts/make-cert.sh` writes `tracker.key` with
+  mode 600; it was world-readable (644) despite the script's `umask 077`.
+
 ## [1.3.6] - 2026-11-07
 
 Move onto the current Alpine base
@@ -434,7 +442,10 @@ Audit release: stale-data detection, Alpine 3.22, optional direct port, UI and r
 - Documentation: [README.md](README.md)
 - Discussions: [GitHub Discussions](https://github.com/rainyvalley/tar1090-tracker-carto/discussions)
 
-[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.3...HEAD
+[Unreleased]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.6...HEAD
+[1.3.6]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.5...v1.3.6
+[1.3.5]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.4...v1.3.5
+[1.3.4]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.2...v1.3.3
 [1.3.2]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/rainyvalley/tar1090-tracker-carto/compare/v1.3.0...v1.3.1

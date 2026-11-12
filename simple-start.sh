@@ -26,6 +26,16 @@ FRAME_ANCESTORS=${FRAME_ANCESTORS:-""}
 # Optional HTTPS: paths to a certificate and its key (see scripts/make-cert.sh)
 WEB_TLS_CERT=${WEB_TLS_CERT:-""}
 WEB_TLS_KEY=${WEB_TLS_KEY:-""}
+# Resolve relative paths from where this script was started before the cd
+# below, so the documented "certs/tracker.crt" keeps working.
+case "$WEB_TLS_CERT" in
+    ""|/*) ;;
+    *) WEB_TLS_CERT="$PWD/$WEB_TLS_CERT" ;;
+esac
+case "$WEB_TLS_KEY" in
+    ""|/*) ;;
+    *) WEB_TLS_KEY="$PWD/$WEB_TLS_KEY" ;;
+esac
 SCHEME=http
 [ -n "$WEB_TLS_CERT" ] && [ -n "$WEB_TLS_KEY" ] && SCHEME=https
 

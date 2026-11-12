@@ -20,6 +20,7 @@ tar1090/rootfs/var/www/tar1090/     # index.html, script.js, style.css, vendored
 CHANGELOG.md                        # repo-level changelog (trimmed copy of the add-on one)
 tar1090/CHANGELOG.md                # add-on changelog — full history
 scripts/release.sh                  # the release tool — use it, never hand-bump
+scripts/make-cert.sh                # self-signed certificate for standalone HTTPS
 .github/workflows/ci.yml            # push/PR: pytest, version check, shellcheck, yamllint, image smoke test
 .github/workflows/release.yml       # tag-triggered only: publishes the GitHub Release
 .github/scripts/                    # CI helpers: check_version.py, check_html_refs.py, smoke_test.py

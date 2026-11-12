@@ -1,5 +1,6 @@
 """Opt-in HTTPS for standalone runs: warnings and a real TLS round trip."""
 
+import os
 import pathlib
 import shutil
 import socket
@@ -29,6 +30,23 @@ def test_warns_on_exposed_plain_http():
 
 def test_half_set_is_reported():
     assert 'both' in app.tls_warnings('127.0.0.1', '/c', '')[0]
+
+
+def test_simple_start_resolves_relative_tls_paths(tmp_path):
+    """The README's relative cert paths must survive the script's cd into app/."""
+    stub_dir = tmp_path / 'bin'
+    stub_dir.mkdir()
+    stub = stub_dir / 'python3'
+    stub.write_text('#!/bin/sh\nprintf "%s\\n%s\\n" "$WEB_TLS_CERT" "$WEB_TLS_KEY"\n')
+    stub.chmod(0o755)
+    env = dict(os.environ)
+    env.update(PATH=f'{stub_dir}{os.pathsep}{env.get("PATH", "")}',
+               WEB_TLS_CERT='certs/tracker.crt',
+               WEB_TLS_KEY='certs/tracker.key')
+    result = subprocess.run([str(ROOT / 'simple-start.sh')], cwd=ROOT, env=env,
+                            capture_output=True, text=True, check=True)
+    assert result.stdout.splitlines()[-2:] == [
+        str(ROOT / 'certs/tracker.crt'), str(ROOT / 'certs/tracker.key')]
 
 
 @pytest.mark.skipif(not shutil.which('openssl'), reason='openssl missing')
