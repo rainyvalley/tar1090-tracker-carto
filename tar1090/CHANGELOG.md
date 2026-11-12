@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.7] - 2026-11-12
+
+Fix relative TLS paths and private-key permissions
+
 ### Fixed
 - **Standalone HTTPS with relative certificate paths.** `simple-start.sh`
   resolves `WEB_TLS_CERT` and `WEB_TLS_KEY` before it changes into the app
